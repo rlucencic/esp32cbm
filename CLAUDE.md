@@ -56,6 +56,32 @@ Commodore's (`main/main.c`): `k <n>` tap key n (row * 8 + column: 1 RETURN,
 `K <n> 0|1`, `T <text>` type, `j <port> <bits>` joystick, `R <model>`
 restart as 0 C64, 1 C128. 89 and 90 lock: `K 90 1` then `K 90 0` toggles.
 
+## M5Stack Tab5
+
+The same code also builds for the M5Stack Tab5 (ESP32-P4, target esp32p4),
+beside the MaTouch build, on `/dev/cu.usbmodem3101`:
+
+```sh
+bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
+  export IDF_PYTHON_ENV_PATH=/Users/robertlucencic/.espressif/tools/python/v5.5.4/venv; \
+  export PATH=$IDF_PYTHON_ENV_PATH/bin:$PATH; \
+  idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=$PWD/build-tab5/sdkconfig build && \
+  idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=$PWD/build-tab5/sdkconfig -p /dev/cu.usbmodem3101 flash'
+```
+
+- Its settings: this project's `sdkconfig.defaults`, then
+  `../esp32emu/boards/m5stack_tab5/sdkconfig.defaults` (`CMakeLists.txt`),
+  into `build-tab5/sdkconfig` (delete it and `reconfigure` after changing
+  either). Board details and lessons: `../esp32emu/CLAUDE.md`, "The two
+  boards".
+- The Tab5 is shared by the projects like the MaTouch: after another
+  project, a full `flash` (partition table and ROMs). The MaTouch build
+  afterwards recompiles everything once (shared `managed_components/`).
+- Measured on the Tab5 (2026-10-17): C64 at BASIC: 100% (paced by the speaker at 30789 Hz), core 1 19% busy (the S3: ~40%), typing through the console; the picture 960x720. Sound on by default
+  (ES8388); the console stays on USB.
+- Not checked by eye yet: the picture on the panel itself (orientation),
+  touch, sound, the Tab5 Keyboard's keys, Bluetooth pairing.
+
 ## Layout
 
 | Path | What |
