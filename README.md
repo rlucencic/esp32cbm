@@ -34,11 +34,12 @@ touch panel, and a web page on your network, handle everything else.
 It's the sibling of [esp32ste](https://github.com/rlucencic/esp32ste) (Atari
 STE), [esp32mac](https://github.com/rlucencic/esp32mac) (Macintosh Plus,
 SE, Classic), [esp32cpc](https://github.com/rlucencic/esp32cpc) (Amstrad
-CPC) and [esp32zx](https://github.com/rlucencic/esp32zx) (ZX Spectrum); all
-five are built on the shared runtime
+CPC), [esp32zx](https://github.com/rlucencic/esp32zx) (ZX Spectrum) and
+[esp32xl](https://github.com/rlucencic/esp32xl) (Atari 800XL and 130XE); all
+six are built on the shared runtime
 [esp32emu](https://github.com/rlucencic/esp32emu), which also holds the 6502
-core (the C64's, the C128's and their drives') and the Z80 core (the
-C128's, shared with the CPC and the Spectrum).
+core (the C64's, the C128's and their drives', shared with the Atari) and
+the Z80 core (the C128's, shared with the CPC and the Spectrum).
 
 ## Features
 
@@ -141,12 +142,12 @@ ROMs, you can also copy them into a `roms` folder on the SD card.
    network: the clock is set from the internet, and the web page becomes
    reachable.
 2. Tap **Bluetooth** to pair a keyboard.
-3. Choose the **model**, then tap **Start Commodore**.
+3. Choose the **model**, then tap **Start**.
 4. Open `http://commodore.local`, drop a disk image onto the page, then
    **Insert into… → 8:**, and on the Commodore `LOAD "$",8` and `LIST`.
 
 <p align="center">
-  <img src="docs/images/setup.png" width="60%" alt="Setup screen: model choice (C64, C128), WiFi, Bluetooth, Disks and Start Commodore buttons">
+  <img src="docs/images/setup.png" width="60%" alt="Setup screen: model choice (C64, C128), WiFi, Bluetooth, Disks and Start buttons">
 </p>
 
 ## Using it
@@ -154,7 +155,7 @@ ROMs, you can also copy them into a `roms` folder on the SD card.
 | To | Do |
 |---|---|
 | Get back to the setup screen | Hold the top-right corner of the screen for 2 s |
-| Change the model | On the setup screen; **Restart Commodore** applies it |
+| Change the model | On the setup screen; **Restart** applies it |
 | Load from a disk | Insert it into **8:**, then `LOAD "$",8` and `LIST` for the directory, `LOAD "NAME",8,1` and `RUN`; on the C128 `DIRECTORY` and `RUN "NAME"` |
 | Make a new disk | **New** next to 8: or 9: on the drives page, or on the web page |
 | Run a program file | Insert the `.PRG`/`.T64` into **Program**: it's loaded and RUN (and again at every start) |
