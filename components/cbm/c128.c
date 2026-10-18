@@ -292,6 +292,20 @@ static uint8_t z_read(uint16_t a)
     return s_z_rd[a >> 8][a & 0xFF];
 }
 
+uint8_t c128_z80_peek(void *ctx, uint32_t a)
+{
+    (void)ctx;
+    return z_read((uint16_t)a);
+}
+
+void c128_z80_poke(void *ctx, uint32_t a, uint8_t v)
+{
+    (void)ctx;
+    if ((a & 0xFFFF) < 0xFF00) {
+        s_z_wr[(a >> 8) & 0xFF][a & 0xFF] = v;
+    }
+}
+
 #ifdef CBM_Z80IO_LOG
 int c128_z80_watch = -1;
 #endif

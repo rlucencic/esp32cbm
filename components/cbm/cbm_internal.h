@@ -166,6 +166,7 @@ void drives_reset(void);
 void drives_run(void);                  /* bring the drives up to the computer's time */
 void drives_frame_end(void);
 bool drives_present(void);
+m6502_t *drive_cpu(int i);              /* the drive's CPU (NULL: no drive) */
 void drives_status(cbm_status_t *status);
 
 /* ---- cart.c ---- */
@@ -242,6 +243,8 @@ void c128_enter_c64_mode(void);         /* (cbm.c) the MMU went into C64 mode */
 
 void c128_init(void);
 void c128_reset(void);
+uint8_t c128_z80_peek(void *ctx, uint32_t a);  /* memory as the Z80 sees it (the debugger) */
+void c128_z80_poke(void *ctx, uint32_t a, uint8_t v);
 void c128_mem_update(void);
 bool c128_mode(void);                   /* a C128 in C128 mode */
 bool c128_in_c64_mode(void);

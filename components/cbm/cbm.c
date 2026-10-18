@@ -11,7 +11,9 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "cbm_internal.h"
+#include "emudbg.h"
 #ifdef CBM_PROFILE
 uint32_t cbm_prof_drive, cbm_prof_vic, cbm_prof_frame, cbm_prof_drive_steps;
 uint32_t cbm_prof_io, cbm_prof_drive_io, cbm_prof_drives_calls;
@@ -484,6 +486,47 @@ void cbm_reset(void)
     update_events();
 }
 
+/* ---- The debugger (emudbg.h): the 6510 (8502), the C128's Z80, the drives' 6502s ---- */
+
+static emudbg_cpu_t s_dbg_cpus[4];
+static const char *const s_drive_names[CBM_DRIVES] = { "drive 8", "drive 9" };
+
+static void dbg_where(char *buf, size_t len)
+{
+    snprintf(buf, len, "frame %lu, line %d, cycle %d", (unsigned long)cbm.frames, cbm.line,
+             (int)(cbm.clock - cbm.line_start));
+}
+
+static emudbg_machine_t s_dbg = {
+    .cpus = s_dbg_cpus,
+    .where = dbg_where,
+    .reset = cbm_reset,
+    .screen = cbm_screen_mode,
+    .render_line = cbm_render_line_rgb565,
+    .type = cbm_type,
+};
+
+static void dbg_set_machine(void)
+{
+    bool c128 = cbm.cfg.model == CBM_MODEL_C128;
+    int n = 0;
+    s_dbg_cpus[n++] = (emudbg_cpu_t){ .name = c128 ? "8502" : "6510", .arch = &emudbg_arch_6502,
+                                      .core = &cbm.cpu };
+    if (c128) {
+        s_dbg_cpus[n++] = (emudbg_cpu_t){ .name = "Z80", .arch = &emudbg_arch_z80,
+                                          .peek = c128_z80_peek, .poke = c128_z80_poke };
+    }
+    for (int i = 0; i < CBM_DRIVES; i++) {
+        if (drive_cpu(i)) {
+            s_dbg_cpus[n++] = (emudbg_cpu_t){ .name = s_drive_names[i], .arch = &emudbg_arch_6502,
+                                              .core = drive_cpu(i) };
+        }
+    }
+    s_dbg.cpu_count = n;
+    s_dbg.name = c128 ? "Commodore 128" : "Commodore 64";
+    emudbg_set_machine(&s_dbg);
+}
+
 bool cbm_init(const cbm_config_t *config)
 {
     if (config->ram == NULL || config->basic == NULL || config->kernal == NULL || config->chargen == NULL ||
@@ -528,6 +571,7 @@ bool cbm_init(const cbm_config_t *config)
     }
     drives_init(config->drive_rom, config->model == CBM_MODEL_C128);
     cbm_reset();
+    dbg_set_machine();
     return true;
 }
 

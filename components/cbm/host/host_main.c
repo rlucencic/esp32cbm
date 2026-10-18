@@ -36,6 +36,8 @@
  *   CBM_Z80TRACE_PC=<pc>[:<f>]  ... from that address (and frame) on
  *   CBM_WAV=<file>          record the sound (stereo WAV)
  *   CBM_QUIET               no summary
+ *   CBM_DEBUG=<port>        serve the debugger (esp32emu's docs/debugger.md) on
+ *                           127.0.0.1:<port> and run in real time until killed
  *
  * Other compile-time logs: -DCBM_MMU_LOG (C128 MMU writes, CPU switches),
  * -DCBM_FAST_LOG (fast serial bytes, 1571 side and speed changes).
@@ -47,6 +49,7 @@
 #include "cbm.h"
 #include "m6502.h"
 #include "z80.h"
+#include "emudbg.h"
 
 static uint16_t s_frame[CBM_SCREEN_WIDTH * CBM_SCREEN_HEIGHT];
 static uint16_t s_vdc[CBM_VDC_WIDTH * CBM_VDC_HEIGHT];
@@ -363,6 +366,7 @@ int main(int argc, char **argv)
     }
     extern m6502_t *cbm_main_cpu(void);
     s_main_cpu = cbm_main_cpu();
+    emudbg_host_run("CBM_DEBUG", cbm_run_frame, 50);
     const char *tr = getenv("CBM_TRACE");
     if (tr) {
         unsigned pc = 0;

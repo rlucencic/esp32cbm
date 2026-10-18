@@ -233,6 +233,13 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 
 ## Testing
 
+- **Debugger** (esp32emu's `components/emudbg`, the VS Code extension
+  `../esp32emu-vscode`): the board serves it on port 6502;
+  `CBM_DEBUG=<port> build/cbm_host ...` serves it from the host build, which
+  then runs in real time until killed. The CPUs (6510/8502, the C128's Z80 and the drives' 6502s), `where()`,
+  the screen and typing are described in `components/cbm/cbm.c` (`emudbg_set_machine()`
+  at every init).
+
 - **Host build**: `make -C components/cbm/host`, then
   `build/cbm_host <c64|c128> [frames] [out.ppm]`; options in `host_main.c`
   (`CBM_DISK8/9`, `CBM_NEWDISK`, `CBM_CART`, `CBM_PRG`, `CBM_SCRIPT` with

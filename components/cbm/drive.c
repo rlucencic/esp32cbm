@@ -655,6 +655,11 @@ void drives_reset(void)
     }
 }
 
+m6502_t *drive_cpu(int i)
+{
+    return i >= 0 && i < CBM_DRIVES && s_drive[i].present ? &s_drive[i].cpu : NULL;
+}
+
 bool drives_present(void)
 {
     return s_drive[0].present;
