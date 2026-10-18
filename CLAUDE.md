@@ -11,9 +11,10 @@ The board side (tasks, LCD, touch, SD, WiFi, BLE, setup screen, web page,
 console), the 6502 core (`components/m6502`) and the Z80 core
 (`components/z80`, with `CONFIG_Z80_READ_SPECIAL` here) are the shared
 library in `../esp32emu`, also used by `../esp32ste`, `../esp32mac`,
-`../esp32cpc`, `../esp32zx` and `../esp32xl` (which shares the 6502 core).
-See its CLAUDE.md for the runtime and the board-level lessons; changes
-there need all six projects built, for both boards.
+`../esp32cpc`, `../esp32zx`, `../esp32xl` (which shares the 6502 core),
+`../esp32msx` and `../esp32gs`. See its CLAUDE.md for the runtime and the
+board-level lessons; changes there need all eight projects built, for both
+boards.
 
 ## Hardware
 
