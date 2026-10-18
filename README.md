@@ -87,9 +87,10 @@ the Z80 core (the C128's, shared with the CPC, the Spectrum and the MSX).
   model, drives, reset
 - **Bluetooth keyboard** (BLE HID), mapped by position as on a C64, with
   the C128's own keys on free PC keys; joystick on the numeric keypad
-- **Web page** at `http://commodore.local`: drop disks, cartridges,
-  programs or `.ZIP` files onto it, put them into drives, eject, make blank
-  disks, and watch the machine, drives, board and Bluetooth devices live
+- **Web page** at `http://commodore.local`: drop disks, cartridges, programs
+  or `.ZIP` files onto it (with a progress bar), put them into drives, eject,
+  make blank disks, and watch the machine, drives, board and Bluetooth devices
+  live
 - **Sound** on the board's speaker (optional, `menuconfig`)
 
 <p align="center">
