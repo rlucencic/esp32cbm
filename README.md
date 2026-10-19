@@ -15,6 +15,11 @@
 </p>
 
 <p align="center">
+  <b>Work in progress:</b> not everything has been tested, and games and demos may or may not
+  work satisfactorily.
+</p>
+
+<p align="center">
   <img alt="The C64's start-up screen: COMMODORE 64 BASIC V2, 38911 BASIC BYTES FREE" src="docs/images/c64-ready.png" width="49%">
   <img alt="The C128 in 40 columns: BASIC 7.0, DIRECTORY of a double-sided 1571 disk with three files, 584 blocks free" src="docs/images/c128-directory.png" width="49%">
   <br>
