@@ -32,13 +32,17 @@ cartridges and programs come from the microSD card. A setup screen on the
 touch panel, and a web page on your network, handle everything else.
 
 It's the sibling of [esp32ste](https://github.com/rlucencic/esp32ste) (Atari
-STE), [esp32mac](https://github.com/rlucencic/esp32mac) (Macintosh Plus,
-SE, Classic), [esp32cpc](https://github.com/rlucencic/esp32cpc) (Amstrad
-CPC), [esp32zx](https://github.com/rlucencic/esp32zx) (ZX Spectrum),
+STE), [esp32mac](https://github.com/rlucencic/esp32mac) (Macintosh Plus, SE,
+Classic), [esp32mac2](https://github.com/rlucencic/esp32mac2) (Macintosh LC
+and II, Tab5 only), [esp32mac3](https://github.com/rlucencic/esp32mac3)
+(Macintosh LC II and LC III, Tab5 only),
+[esp32cpc](https://github.com/rlucencic/esp32cpc) (Amstrad CPC),
+[esp32zx](https://github.com/rlucencic/esp32zx) (ZX Spectrum),
 [esp32xl](https://github.com/rlucencic/esp32xl) (Atari 800XL and 130XE),
-[esp32msx](https://github.com/rlucencic/esp32msx) (MSX1 and MSX2) and
-[esp32gs](https://github.com/rlucencic/esp32gs) (Apple IIGS); all eight are
-built on the shared runtime
+[esp32msx](https://github.com/rlucencic/esp32msx) (MSX1 and MSX2),
+[esp32gs](https://github.com/rlucencic/esp32gs) (Apple IIGS) and
+[esp32coco](https://github.com/rlucencic/esp32coco) (Tandy Color Computer 2
+and 3); all are built on the shared runtime
 [esp32emu](https://github.com/rlucencic/esp32emu), which also holds the 6502
 core (the C64's, the C128's and their drives', shared with the Atari) and
 the Z80 core (the C128's, shared with the CPC, the Spectrum and the MSX).
