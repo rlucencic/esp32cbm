@@ -1,9 +1,8 @@
 /*
  * Disk images as GCR: what the drive's head reads.
  *
- * .D64 (35 tracks, with or without the error bytes; a 40-track one's
- * first 35) and .D71 (two sides of 35 tracks) are encoded into GCR tracks
- * as a 1541 formats them: per sector a sync, the header block, a gap, a
+ * .D64 (35 or 40 tracks, with or without the error bytes) and .D71 (two
+ * sides of 35 tracks) are encoded into GCR tracks as a 1541 formats them: per sector a sync, the header block, a gap, a
  * sync, the data block and a gap, the gaps sized to fill the track at its
  * zone's speed. The error bytes become the errors the DOS sees (missing
  * header or data block, bad checksums, no sync, wrong ID). .G64 holds the
@@ -24,16 +23,26 @@ static const uint8_t gcr_code[16] = {
 };
 static int8_t gcr_decode_table[32];
 
-int gcr_sectors(int track)
+int gcr_sectors(int track, int sides)
 {
-    track = (track - 1) % 35 + 1;       /* side 2 of a D71 counts again */
+    if (sides == 2) {
+        track = (track - 1) % 35 + 1;   /* side 2 of a D71 counts again */
+    }
     return track <= 17 ? 21 : track <= 24 ? 19 : track <= 30 ? 18 : 17;
 }
 
-int gcr_zone(int track)
+int gcr_zone(int track, int sides)
 {
-    track = (track - 1) % 35 + 1;
+    if (sides == 2) {
+        track = (track - 1) % 35 + 1;
+    }
     return track <= 17 ? 3 : track <= 24 ? 2 : track <= 30 ? 1 : 0;
+}
+
+/* Where track t lies in gcr_disk_t.track[]: a D71's 36-70 on its second side */
+static int track_index(int track, int sides)
+{
+    return sides == 2 && track > 35 ? GCR_HALF_TRACKS + (track - 36) * 2 : (track - 1) * 2;
 }
 
 static const uint16_t zone_bytes[4] = { 6250, 6666, 7142, 7692 };
@@ -80,20 +89,20 @@ static void init_tables(void)
 
 /* ---- Encoding a D64 track ---- */
 
-static uint32_t sector_offset(int track, int sector)
+static uint32_t sector_offset(int track, int sector, int sides)
 {
     uint32_t off = 0;
     for (int t = 1; t < track; t++) {
-        off += gcr_sectors(t);
+        off += gcr_sectors(t, sides);
     }
     return (off + sector) * 256;
 }
 
 /* Track `track` (1-70) of an image into GCR; errors: per sector or NULL */
-static uint8_t *encode_track(const uint8_t *image, int track, const uint8_t *errors, const uint8_t id[2],
+static uint8_t *encode_track(const uint8_t *image, int track, int sides, const uint8_t *errors, const uint8_t id[2],
                              uint16_t *len)
 {
-    int zone = gcr_zone(track), n = gcr_sectors(track);
+    int zone = gcr_zone(track, sides), n = gcr_sectors(track, sides);
     uint16_t total = zone_bytes[zone];
     uint8_t *t = cbm_malloc(total);
     if (t == NULL) {
@@ -104,8 +113,8 @@ static uint8_t *encode_track(const uint8_t *image, int track, const uint8_t *err
     int gap = (total - n * per_sector) / n;
     uint8_t *p = t;
     for (int s = 0; s < n; s++) {
-        const uint8_t *data = image + sector_offset(track, s);
-        uint8_t err = errors ? errors[sector_offset(track, s) / 256] : 1;
+        const uint8_t *data = image + sector_offset(track, s, sides);
+        uint8_t err = errors ? errors[sector_offset(track, s, sides) / 256] : 1;
         uint8_t id1 = id[0], id2 = id[1];
         if (err == 0x0B || err == 29) {
             id1 ^= 0xFF;                /* disk ID mismatch */
@@ -150,9 +159,9 @@ static uint8_t *encode_track(const uint8_t *image, int track, const uint8_t *err
 
 /* ---- Decoding a track back into its sectors (writes) ---- */
 
-static void decode_track(const uint8_t *t, uint16_t len, int track, uint8_t *image, uint32_t *written)
+static void decode_track(const uint8_t *t, uint16_t len, int track, int sides, uint8_t *image, uint32_t *written)
 {
-    int n = gcr_sectors(track);
+    int n = gcr_sectors(track, sides);
     int sector = -1;
     for (uint32_t i = 0; i < (uint32_t)len * 2; i++) {
         /* a sync: two 0xFF, then the block after the last of them */
@@ -175,7 +184,7 @@ static void decode_track(const uint8_t *t, uint16_t len, int track, uint8_t *ima
             for (int k = 1; k < 65; k++) {
                 decode5(gcr + k * 5, b + k * 4);
             }
-            uint8_t *dst = image + sector_offset(track, sector);
+            uint8_t *dst = image + sector_offset(track, sector, sides);
             if (memcmp(dst, b + 1, 256) != 0) {
                 memcpy(dst, b + 1, 256);
                 (*written)++;
@@ -191,7 +200,7 @@ static void decode_track(const uint8_t *t, uint16_t len, int track, uint8_t *ima
 
 bool gcr_read_sector(const gcr_disk_t *d, int track, int sector, uint8_t *out)
 {
-    int i = d->g64 || track <= 35 ? (track - 1) * 2 : GCR_HALF_TRACKS + (track - 36) * 2;
+    int i = d->g64 ? (track - 1) * 2 : track_index(track, d->sides);
     if (track < 1 || i >= GCR_HALF_TRACKS * 2 || d->track[i] == NULL || d->len[i] == 0) {
         return false;
     }
@@ -293,8 +302,7 @@ static bool load_g64(gcr_disk_t *d, const uint8_t *f, long size)
 
 static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
 {
-    int tracks;
-    uint32_t file_blocks = 0;       /* the file's sectors before its error bytes (0: as the tracks') */
+    int tracks, sides = d71 ? 2 : 1;
     bool errors = false;
     if (d71) {
         if (size != 349696 && size != 351062) {
@@ -306,17 +314,14 @@ static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
         switch (size) {
         case 174848: tracks = 35; break;
         case 175531: tracks = 35; errors = true; break;
-        /* 40 tracks: the first 35 (tracks 36-40 aren't laid out as a 1541's
-         * own; the other 5 stay in the file as they are)
-         */
-        case 196608: tracks = 35; file_blocks = 768; break;
-        case 197376: tracks = 35; file_blocks = 768; errors = true; break;
+        case 196608: tracks = 40; break;
+        case 197376: tracks = 40; errors = true; break;
         default: return false;
         }
     }
     uint32_t blocks = 0;
     for (int t = 1; t <= tracks; t++) {
-        blocks += gcr_sectors(t);
+        blocks += gcr_sectors(t, sides);
     }
     d->image = cbm_malloc(blocks * 256);
     if (d->image == NULL) {
@@ -325,20 +330,19 @@ static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
     memcpy(d->image, f, blocks * 256);
     d->image_size = blocks * 256;
     d->tracks = tracks;
-    const uint8_t *err = errors ? f + (file_blocks ? file_blocks : blocks) * 256 : NULL;
+    const uint8_t *err = errors ? f + blocks * 256 : NULL;
     uint8_t id[2];
-    const uint8_t *bam = d->image + sector_offset(18, 0);
+    const uint8_t *bam = d->image + sector_offset(18, 0, sides);
     id[0] = bam[0xA2];
     id[1] = bam[0xA3];
     for (int t = 1; t <= tracks; t++) {
-        int side = t > 35, half = ((t - 1) % 35) * 2;
-        int i = side * GCR_HALF_TRACKS + half;
-        d->track[i] = encode_track(d->image, t, err, id, &d->len[i]);
+        int i = track_index(t, sides);
+        d->track[i] = encode_track(d->image, t, sides, err, id, &d->len[i]);
         if (d->track[i] == NULL) {
             return false;
         }
     }
-    d->sides = d71 ? 2 : 1;
+    d->sides = sides;
     return true;
 }
 
@@ -420,11 +424,10 @@ bool gcr_flush(gcr_disk_t *d, uint32_t *sectors_written)
             continue;
         }
         uint32_t written = 0;
-        decode_track(d->track[i], d->len[i], track, d->image, &written);
+        decode_track(d->track[i], d->len[i], track, d->sides, d->image, &written);
         if (written) {
-            uint32_t off = sector_offset(track, 0);
-            ok = fseek(fp, off, SEEK_SET) == 0 &&
-                 fwrite(d->image + off, 1, gcr_sectors(track) * 256, fp) == (size_t)gcr_sectors(track) * 256;
+            uint32_t off = sector_offset(track, 0, d->sides), n = gcr_sectors(track, d->sides) * 256;
+            ok = fseek(fp, off, SEEK_SET) == 0 && fwrite(d->image + off, 1, n, fp) == n;
             if (sectors_written) {
                 *sectors_written += written;
             }
@@ -437,17 +440,18 @@ bool gcr_flush(gcr_disk_t *d, uint32_t *sectors_written)
 bool gcr_create(const char *path, bool d71, const char *name)
 {
     uint32_t size = d71 ? 349696 : 174848;
+    int sides = d71 ? 2 : 1;
     uint8_t *img = cbm_calloc(1, size);
     if (img == NULL) {
         return false;
     }
-    uint8_t *bam = img + sector_offset(18, 0);
+    uint8_t *bam = img + sector_offset(18, 0, sides);
     bam[0] = 18;
     bam[1] = 1;
     bam[2] = 0x41;                      /* 'A': 1541 format */
     bam[3] = d71 ? 0x80 : 0x00;         /* double-sided flag */
     for (int t = 1; t <= 35; t++) {
-        int n = gcr_sectors(t);
+        int n = gcr_sectors(t, sides);
         uint8_t *e = bam + 4 * t;
         uint32_t bits = (1u << n) - 1;
         if (t == 18) {
@@ -467,9 +471,9 @@ bool gcr_create(const char *path, bool d71, const char *name)
     bam[0xA6] = 'A';
     if (d71) {
         /* side 2's free counts at $DD, its bitmap in track 53 sector 0 */
-        uint8_t *bam2 = img + sector_offset(53, 0);
+        uint8_t *bam2 = img + sector_offset(53, 0, sides);
         for (int t = 36; t <= 70; t++) {
-            int n = gcr_sectors(t);
+            int n = gcr_sectors(t, sides);
             uint32_t bits = (1u << n) - 1;
             if (t == 53) {
                 bits = 0;               /* reserved on a 1571 */
@@ -482,7 +486,7 @@ bool gcr_create(const char *path, bool d71, const char *name)
             e[2] = bits >> 16;
         }
     }
-    uint8_t *dir = img + sector_offset(18, 1);
+    uint8_t *dir = img + sector_offset(18, 1, sides);
     dir[1] = 0xFF;
     FILE *fp = fopen(path, "wb");
     bool ok = fp && fwrite(img, 1, size, fp) == size;

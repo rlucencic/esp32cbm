@@ -26,12 +26,12 @@ static bool gcr_read(void *ctx, uint64_t offset, void *buf, uint32_t len)
     uint8_t *out = buf, sector[256];
     while (len > 0) {
         uint32_t block = (uint32_t)(offset / 256), at = (uint32_t)(offset % 256), n = 256 - at;
-        int track = 1;
-        while (track <= 70 && block >= (uint32_t)gcr_sectors(track)) {
-            block -= gcr_sectors(track);
+        int track = 1, last = d->sides == 2 ? 70 : 42;
+        while (track <= last && block >= (uint32_t)gcr_sectors(track, d->sides)) {
+            block -= gcr_sectors(track, d->sides);
             track++;
         }
-        if (track > 70 || !gcr_read_sector(d, track, (int)block, sector)) {
+        if (track > last || !gcr_read_sector(d, track, (int)block, sector)) {
             return false;
         }
         n = n < len ? n : len;

@@ -31,5 +31,9 @@ bool gcr_create(const char *path, bool d71, const char *name);
  * data block isn't found or is bad
  */
 bool gcr_read_sector(const gcr_disk_t *d, int track, int sector, uint8_t *out);
-int gcr_sectors(int track);
-int gcr_zone(int track);
+/* A track's sectors and speed zone (3: 21 sectors ... 0: 17): a D71's
+ * tracks 36-70 (sides 2) are its second side's 1-35, a single-sided disk's
+ * 36-42 are zone 0's
+ */
+int gcr_sectors(int track, int sides);
+int gcr_zone(int track, int sides);
