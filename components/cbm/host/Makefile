@@ -5,20 +5,22 @@ CBM       := ..
 Z80       := ../../../../esp32emu/components/z80
 M6502     := ../../../../esp32emu/components/m6502
 EMUDBG    := ../../../../esp32emu/components/emudbg
+DISKSPACE := ../../../../esp32emu/components/diskspace
 BUILD     := build
 CFLAGS    := -O2 -g -Wall -Wextra -Wno-unused-parameter -DZ80_HOST_HOOK -DM6502_HOST_HOOK -DCONFIG_Z80_TIMING_TSTATES=1 -DCONFIG_Z80_READ_SPECIAL=1 \
-             -I$(CBM)/include -I$(CBM) -I$(Z80)/include -I$(M6502)/include -I$(EMUDBG)/include
+             -I$(CBM)/include -I$(CBM) -I$(Z80)/include -I$(M6502)/include -I$(EMUDBG)/include -I$(DISKSPACE)/include
 
 CBM_SRCS   := $(wildcard $(CBM)/*.c)
 CBM_OBJS   := $(patsubst $(CBM)/%.c,$(BUILD)/cbm/%.o,$(CBM_SRCS)) $(BUILD)/z80.o $(BUILD)/z80_dbg.o $(BUILD)/m6502.o $(BUILD)/m6502_dbg.o \
-              $(BUILD)/emudbg.o $(BUILD)/emudbg_posix.o
+              $(BUILD)/emudbg.o $(BUILD)/emudbg_posix.o $(BUILD)/diskspace_cbm.o
 
 all: $(BUILD)/cbm_host
 
 $(BUILD)/cbm_host: host_main.c $(CBM_OBJS)
 	$(CC) $(CFLAGS) $^ -lm -lpthread -o $@
 
-$(BUILD)/cbm/%.o: $(CBM)/%.c $(wildcard $(CBM)/*.h $(CBM)/include/*.h) $(Z80)/include/z80.h $(M6502)/include/m6502.h
+$(BUILD)/cbm/%.o: $(CBM)/%.c $(wildcard $(CBM)/*.h $(CBM)/include/*.h) $(Z80)/include/z80.h $(M6502)/include/m6502.h \
+                   $(DISKSPACE)/include/diskspace.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -31,6 +33,11 @@ $(BUILD)/%.o: $(M6502)/%.c $(M6502)/include/m6502.h $(EMUDBG)/include/emudbg.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/%.o: $(EMUDBG)/%.c $(EMUDBG)/include/emudbg.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# (only the Commodore's counter of esp32emu's diskspace)
+$(BUILD)/diskspace_cbm.o: $(DISKSPACE)/cbm.c $(DISKSPACE)/include/diskspace.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

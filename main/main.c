@@ -509,9 +509,11 @@ static void status(emu_json_t *j, int section)
     cbm_disk_status(&ds);
     for (int d = DRIVE_8; d <= DRIVE_9; d++) {
         const char *name = disks_name(d);
+        uint64_t free_bytes = 0, size = 0;
+        cbm_disk_space(d, &free_bytes, &size);
         snprintf(text, sizeof(text), "track %u%s", ds.track[d], ds.motor[d] ? ", motor on" : "");
-        emu_json_drive(j, drive_names[d], name, cbm_disk_write_protected(d), ds.light == d, ds.reads[d],
-                       ds.writes[d], name ? text : NULL);
+        emu_json_drive_space(j, drive_names[d], name, cbm_disk_write_protected(d), ds.light == d, ds.reads[d],
+                             ds.writes[d], name ? text : NULL, free_bytes, size);
     }
     const char *cart = disks_name(DRIVE_CART);
     emu_json_drive(j, drive_names[DRIVE_CART], cart, true, false, 0, 0, cart ? cbm_cart_info() : NULL);

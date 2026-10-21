@@ -799,6 +799,7 @@ bool cbm_disk_insert(int drive, const char *path)
     *d->disk = *disk;
     free(disk);
     d->inserted = true;
+    space_update(drive, d->disk);
     return true;
 }
 
@@ -813,6 +814,7 @@ void cbm_disk_eject(int drive)
     }
     gcr_free(d->disk);
     d->inserted = false;
+    space_update(drive, NULL);
 }
 
 const char *cbm_disk_path(int drive)
@@ -839,8 +841,12 @@ void cbm_disk_flush(void)
 {
     for (int i = 0; i < CBM_DRIVES; i++) {
         drive_t *d = &s_drive[i];
+        bool written = d->inserted && gcr_dirty(d->disk);
         if (d->inserted && !gcr_flush(d->disk, &d->writes)) {
             CBM_LOG("can't write %s", d->disk->path);
+        }
+        if (written) {
+            space_update(i, d->disk);
         }
     }
 }

@@ -266,6 +266,10 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 - Not verified yet: sound on the speaker, a BLE keyboard on the Commodore,
   joysticks, cartridges, G64 and T64 images, fast loaders, games, demos,
   the web page's drop area.
+- **Free disk space** (web page, `space.c`): the BAM's blocks free read
+  from the live GCR (`gcr_read_sector()`: D64, D71, G64), counted at
+  insert, eject and after a flush. Host: 662, 1327 and 584 blocks as the
+  drives' own directories said; not on the board yet.
 
 ## Open items
 
@@ -273,6 +277,11 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   every disk byte while SO is enabled.
 - No WD1770 MFM, no VDC interlace/light pen, FAST doesn't slow I/O.
 - PAL only, 6581 only; no datasette, REU, printer, 1351 mouse.
+- 40-track D64s (SpeedDOS, DolphinDOS) are read as their first 35 tracks
+  (tracks 36-40 stay in the file untouched): `gcr_sectors()` counts
+  tracks 36-70 as a D71's side 2, so they'd need the disk's kind passed
+  through (the copy used to read 5 KB past the file's buffer). The free
+  space counts their first 35 too.
 - Public on GitHub (`github.com/rlucencic/esp32cbm`, pushed to `main`).
   Licence: MIT (`LICENSE`).
 

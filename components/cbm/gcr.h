@@ -8,7 +8,7 @@
 
 #define GCR_HALF_TRACKS     84          /* per side: tracks 1-42 and the halves between */
 
-typedef struct {
+typedef struct gcr_disk {
     char path[256];
     bool wp, g64;
     int sides, tracks;
@@ -26,5 +26,10 @@ void gcr_free(gcr_disk_t *d);
 bool gcr_dirty(const gcr_disk_t *d);
 bool gcr_flush(gcr_disk_t *d, uint32_t *sectors_written);
 bool gcr_create(const char *path, bool d71, const char *name);
+/* A sector's 256 bytes as the head reads them from the GCR now (tracks
+ * 1-70: a D71's side 2 is 36-70; a G64's 1-42); false if its header or
+ * data block isn't found or is bad
+ */
+bool gcr_read_sector(const gcr_disk_t *d, int track, int sector, uint8_t *out);
 int gcr_sectors(int track);
 int gcr_zone(int track);

@@ -112,6 +112,11 @@ const char *cbm_disk_path(int drive);       /* NULL when empty */
 bool cbm_disk_write_protected(int drive);
 bool cbm_disk_dirty(void);
 void cbm_disk_flush(void);
+/* The disk's free space and size in bytes, as its BAM counts "blocks free"
+ * (256 bytes a block); worked out at insert and flush (any task may ask).
+ * False if not known (no disk, no BAM found)
+ */
+bool cbm_disk_space(int drive, uint64_t *free_bytes, uint64_t *size);
 
 /* A formatted blank disk: CBM_D64_BYTES or CBM_D71_BYTES */
 #define CBM_D64_BYTES           174848

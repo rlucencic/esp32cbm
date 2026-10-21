@@ -1,13 +1,13 @@
 /*
  * Disk images as GCR: what the drive's head reads.
  *
- * .D64 (35 or 40 tracks, with or without the error bytes) and .D71 (two
- * sides of 35 tracks) are encoded into GCR tracks as a 1541 formats them:
- * per sector a sync, the header block, a gap, a sync, the data block and a
- * gap, the gaps sized to fill the track at its zone's speed. The error
- * bytes become the errors the DOS sees (missing header or data block, bad
- * checksums, no sync, wrong ID). .G64 holds the GCR itself, half tracks
- * and protections included.
+ * .D64 (35 tracks, with or without the error bytes; a 40-track one's
+ * first 35) and .D71 (two sides of 35 tracks) are encoded into GCR tracks
+ * as a 1541 formats them: per sector a sync, the header block, a gap, a
+ * sync, the data block and a gap, the gaps sized to fill the track at its
+ * zone's speed. The error bytes become the errors the DOS sees (missing
+ * header or data block, bad checksums, no sync, wrong ID). .G64 holds the
+ * GCR itself, half tracks and protections included.
  *
  * Writes are kept in the GCR; flushing decodes the changed tracks back to
  * sectors (D64, D71), or writes the GCR as it is (G64, track lengths
@@ -189,6 +189,51 @@ static void decode_track(const uint8_t *t, uint16_t len, int track, uint8_t *ima
     }
 }
 
+bool gcr_read_sector(const gcr_disk_t *d, int track, int sector, uint8_t *out)
+{
+    int i = d->g64 || track <= 35 ? (track - 1) * 2 : GCR_HALF_TRACKS + (track - 36) * 2;
+    if (track < 1 || i >= GCR_HALF_TRACKS * 2 || d->track[i] == NULL || d->len[i] == 0) {
+        return false;
+    }
+    const uint8_t *t = d->track[i];
+    uint32_t len = d->len[i];
+    bool header = false;
+    /* (as decode_track(), over two turns: a sector may wrap round) */
+    for (uint32_t p = 0; p < len * 2; p++) {
+        if (t[p % len] != 0xFF || t[(p + 1) % len] != 0xFF) {
+            continue;
+        }
+        uint32_t j = p;
+        while (t[j % len] == 0xFF && j < p + len) {
+            j++;
+        }
+        uint8_t gcr[325], b[260];
+        for (int k = 0; k < 325; k++) {
+            gcr[k] = t[(j + k) % len];
+        }
+        decode5(gcr, b);
+        if (b[0] == 0x08) {
+            header = b[2] == sector && b[3] == track;
+        } else if (b[0] == 0x07 && header) {
+            bool ok = true;
+            uint8_t ck = 0;
+            for (int k = 1; k < 65; k++) {
+                ok = decode5(gcr + k * 5, b + k * 4) && ok;
+            }
+            for (int k = 1; k <= 256; k++) {
+                ck ^= b[k];
+            }
+            if (!ok || ck != b[257]) {
+                return false;
+            }
+            memcpy(out, b + 1, 256);
+            return true;
+        }
+        p = j + 9;
+    }
+    return false;
+}
+
 /* ---- Images ---- */
 
 static bool has_ext(const char *name, const char *ext)
@@ -249,6 +294,7 @@ static bool load_g64(gcr_disk_t *d, const uint8_t *f, long size)
 static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
 {
     int tracks;
+    uint32_t file_blocks = 0;       /* the file's sectors before its error bytes (0: as the tracks') */
     bool errors = false;
     if (d71) {
         if (size != 349696 && size != 351062) {
@@ -260,8 +306,11 @@ static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
         switch (size) {
         case 174848: tracks = 35; break;
         case 175531: tracks = 35; errors = true; break;
-        case 196608: tracks = 40; break;
-        case 197376: tracks = 40; errors = true; break;
+        /* 40 tracks: the first 35 (tracks 36-40 aren't laid out as a 1541's
+         * own; the other 5 stay in the file as they are)
+         */
+        case 196608: tracks = 35; file_blocks = 768; break;
+        case 197376: tracks = 35; file_blocks = 768; errors = true; break;
         default: return false;
         }
     }
@@ -276,7 +325,7 @@ static bool load_d64(gcr_disk_t *d, const uint8_t *f, long size, bool d71)
     memcpy(d->image, f, blocks * 256);
     d->image_size = blocks * 256;
     d->tracks = tracks;
-    const uint8_t *err = errors ? f + blocks * 256 : NULL;
+    const uint8_t *err = errors ? f + (file_blocks ? file_blocks : blocks) * 256 : NULL;
     uint8_t id[2];
     const uint8_t *bam = d->image + sector_offset(18, 0);
     id[0] = bam[0xA2];

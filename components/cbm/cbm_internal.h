@@ -169,6 +169,12 @@ bool drives_present(void);
 m6502_t *drive_cpu(int i);              /* the drive's CPU (NULL: no drive) */
 void drives_status(cbm_status_t *status);
 
+/* ---- space.c: free space on the disks (the web page) ---- */
+
+struct gcr_disk;
+/* Worked out again from the drive's disk (NULL: none); emulation stopped */
+void space_update(int drive, const struct gcr_disk *disk);
+
 /* ---- cart.c ---- */
 
 extern bool cart_exrom, cart_game;      /* the lines as the PLA sees them (true = high) */

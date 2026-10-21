@@ -418,6 +418,13 @@ int main(int argc, char **argv)
         cbm_get_status(&s);
         printf("%d frames in %.2f s (%.0f%% of real time), PC $%04X\n", frames, secs,
                frames / 50.125 / secs * 100, s.pc);
+        for (int d = 0; d < CBM_DRIVES; d++) {
+            uint64_t free_bytes, size;
+            if (cbm_disk_space(d, &free_bytes, &size)) {
+                printf("%d: %llu bytes free of %llu (%llu blocks free)\n", 8 + d, (unsigned long long)free_bytes,
+                       (unsigned long long)size, (unsigned long long)free_bytes / 256);
+            }
+        }
     }
     if (out) {
         write_ppm(out);
