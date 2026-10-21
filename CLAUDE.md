@@ -1,4 +1,4 @@
-# esp32cbm: Commodore 64 / 128 on the Makerfabs MaTouch ESP32-S3 7"
+# esp32cbm: Commodore 64 / 128 on the Makerfabs MaTouch ESP32-S3 7" and the M5Stack Tab5
 
 A Commodore 64 and a Commodore 128 (PAL): 6510/8502 every bus cycle, VIC-II,
 two 6526s, SID; the C128's MMU, VDC (80 columns), FAST (2 MHz) and Z80
@@ -269,14 +269,16 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 - **Free disk space** (web page, `space.c`): the BAM's blocks free read
   from the live GCR (`gcr_read_sector()`: D64, D71, G64), counted at
   insert, eject and after a flush. Host: 662, 1327 and 584 blocks as the
-  drives' own directories said; not on the board yet.
+  drives' own directories said; Tab5 (2026-10-21): a 40-track disk 664
+  blocks, 663 after a SAVE, as the C64's directory said.
 - **40-track D64s** (SpeedDOS, DolphinDOS): tracks 36-40 are zone 0 (17
   sectors) on side 1, where the head steps to them (`gcr_sectors()` and
   `gcr_zone()` take the disk's sides: only a D71's 36-70 are its second
   side). Checked on the host under AddressSanitizer: every sector of 35-
   and 40-track D64s (with error bytes too) and a D71 read back from the
   GCR as in the file; a BASIC SAVE onto a 40-track disk writes its
-  directory and keeps tracks 36-40. (They used to be counted as side 2:
+  directory and keeps tracks 36-40 (host, and on the Tab5: the file
+  downloaded back). (They used to be counted as side 2:
   21 sectors each, the copy reading 5 KB past the file's buffer.)
 
 ## Open items
