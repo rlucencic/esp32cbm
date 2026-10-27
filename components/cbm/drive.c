@@ -814,9 +814,6 @@ bool cbm_disk_insert(int drive, const char *path)
         return false;
     }
     drive_t *d = &s_drive[drive];
-    if (d->rom == NULL) {
-        return false;
-    }
     if (d->disk == NULL) {
         d->disk = cbm_calloc(1, sizeof(gcr_disk_t));
     }
@@ -829,8 +826,11 @@ bool cbm_disk_insert(int drive, const char *path)
     *d->disk = *disk;
     free(disk);
     d->inserted = true;
-    if (drive > 0) {
-        drive_power(d, true);           /* second unit: on only with a disk */
+    /* Before Start, drives_init has not run (rom is NULL): only keep the
+     * image. NVS restore and the setup screen insert then; present follows
+     * at init. Once running, unit 9 comes onto the bus with the disk. */
+    if (drive > 0 && d->rom != NULL) {
+        drive_power(d, true);
     }
     space_update(drive, d->disk);
     return true;
@@ -847,7 +847,7 @@ void cbm_disk_eject(int drive)
     }
     gcr_free(d->disk);
     d->inserted = false;
-    if (drive > 0) {
+    if (drive > 0 && d->rom != NULL) {
         drive_power(d, false);          /* second unit off the bus again */
     }
     space_update(drive, NULL);
