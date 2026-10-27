@@ -593,6 +593,32 @@ static void map_drive(drive_t *d)
 
 /* ---- Running ---- */
 
+/* Drive 8 is always on when we have a ROM. Drive 9 only while a disk is
+ * in it: demos (Unity's Bitbreaker loader) scan the bus and refuse to run
+ * with "MORE THAN 1 DRIVE ON BUS" if a second unit answers. */
+static void drive_power(drive_t *d, bool on)
+{
+    if (on == d->present) {
+        return;
+    }
+    d->present = on;
+    if (!on) {
+        return;
+    }
+    map_drive(d);
+    d->hist_pos = s_hist_head;
+    d->atn = d->clk = d->data = false;
+    clock_start(d);
+    d->side = 0;
+    d->fast_out = false;
+    via_reset(&d->via1);
+    via_reset(&d->via2);
+    cia_reset(&d->cia);
+    memset(d->ram, 0, sizeof(d->ram));
+    d->cpu.irq = 0;
+    m6502_reset(&d->cpu);
+}
+
 void drives_init(const uint8_t *rom, bool is_1571)
 {
     memset(s_open, 0xFF, sizeof(s_open));
@@ -604,7 +630,8 @@ void drives_init(const uint8_t *rom, bool is_1571)
         memset(d, 0, sizeof(*d));
         d->disk = disk ? disk : cbm_calloc(1, sizeof(gcr_disk_t));
         d->inserted = inserted;
-        d->present = rom != NULL;
+        /* unit 9 off until a disk is inserted (see drive_power) */
+        d->present = rom != NULL && (i == 0 || inserted);
         d->unit = 8 + i;
         d->rom = rom;
         static const m6502_bus_t bus = { .read = drive_read, .write = drive_write };
@@ -787,6 +814,9 @@ bool cbm_disk_insert(int drive, const char *path)
         return false;
     }
     drive_t *d = &s_drive[drive];
+    if (d->rom == NULL) {
+        return false;
+    }
     if (d->disk == NULL) {
         d->disk = cbm_calloc(1, sizeof(gcr_disk_t));
     }
@@ -799,6 +829,9 @@ bool cbm_disk_insert(int drive, const char *path)
     *d->disk = *disk;
     free(disk);
     d->inserted = true;
+    if (drive > 0) {
+        drive_power(d, true);           /* second unit: on only with a disk */
+    }
     space_update(drive, d->disk);
     return true;
 }
@@ -814,6 +847,9 @@ void cbm_disk_eject(int drive)
     }
     gcr_free(d->disk);
     d->inserted = false;
+    if (drive > 0) {
+        drive_power(d, false);          /* second unit off the bus again */
+    }
     space_update(drive, NULL);
 }
 

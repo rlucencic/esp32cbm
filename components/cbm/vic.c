@@ -14,6 +14,8 @@
  * where it changed. The window is X -16 .. 383 (sprite coordinates) and
  * raster lines 8 .. 307.
  */
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "cbm_internal.h"
 
@@ -48,6 +50,17 @@ static uint8_t s_mc[8], s_mcbase[8];
 static bool s_dma[8], s_disp[8], s_yff[8];
 static uint32_t s_sdata[8];             /* 24 bits fetched for this line */
 static uint8_t s_sline;                 /* sprites drawn on this line */
+#ifndef ESP_PLATFORM
+/* Host-only: CBM_VIC_DIAG=<frame> samples (kept out of the board build). */
+static int s_badline_count;
+static int s_d011_bl;
+static uint8_t s_diag_d011, s_diag_d016, s_diag_d018, s_diag_d015, s_diag_den;
+static uint32_t s_diag_sdata0;
+static uint8_t s_diag_sline;
+static uint8_t s_diag_bg1[312], s_diag_bg2[312], s_diag_spy[312], s_diag_spr[312];
+static uint8_t s_diag_spcol[312], s_diag_spena[312];
+static unsigned s_diag_w22, s_diag_w23, s_diag_w27, s_diag_w15, s_diag_w12;
+#endif
 
 /* The line being drawn: colour indices and foreground flags */
 static uint8_t s_pix[WIN_W] __attribute__((aligned(4)));
@@ -241,9 +254,10 @@ static void draw_graphics(int x0, int x1)
             char_pixels(col, mode, bg, cb, &s_gpix[col], &s_gfg[col]);
         }
         memcpy(s_pix + x, (const uint8_t *)s_gpix + (x - gx0), end - x);
-        if (s_sline) {
-            memcpy(s_fg + x, (const uint8_t *)s_gfg + (x - gx0), end - x);
-        }
+        /* Always keep s_fg: priority/collisions need it whenever sprites
+         * appear (a stale row from a sprite-less line put MCM black over
+         * Unity's metal sprites). */
+        memcpy(s_fg + x, (const uint8_t *)s_gfg + (x - gx0), end - x);
         x = end;
     }
     if (x < x1) {
@@ -262,14 +276,17 @@ static uint32_t line_key(void)
 {
     uint32_t h = 2166136261u;
 #define MIX(v)  (h = (h ^ (uint32_t)(v)) * 16777619u)
-    MIX(r[0x11] & 0x78);
+    /* Full $D011 (YSCROLL too): FLI changes it every line; masking it off
+     * let different FLI rows share a key when the fetched bytes matched. */
+    MIX(r[0x11]);
     MIX(r[0x16] & 0x1F);
     MIX(r[0x18]);
     MIX(r[0x20] | (r[0x21] << 4) | ((uint32_t)r[0x22] << 8) | ((uint32_t)r[0x23] << 12) | ((uint32_t)r[0x24] << 16));
     MIX(s_vborder | (s_mborder << 1) | (s_display << 2) | (s_bank << 3) | (s_mem_id << 5));
+    MIX(s_rc | (s_vc << 3) | ((uint32_t)s_vcbase << 14));
     bool rsel = r[0x11] & 0x08;
     if (s_vborder && s_mborder && s_line != (rsel ? 51 : 55) && s_line != (rsel ? 251 : 247)) {
-        return h;                       /* all border */
+        return h;                       /* all border (sprites force a redraw elsewhere) */
     }
     uint8_t mode = ((r[0x11] & 0x60) | (r[0x16] & 0x10)) >> 4;
     uint16_t cb = (r[0x18] & 0x0E) << 10;
@@ -278,6 +295,18 @@ static uint32_t line_key(void)
     }
 #undef MIX
     return h;
+}
+
+/* Sprite X wraps at 504 ($1F8), not at the window's left (was 488 and put
+ * sprites near the right edge onto the left — multiplexed logos shredded).
+ */
+static inline int sprite_x(int i)
+{
+    int sx = r[i * 2] | (((r[0x10] >> i) & 1) << 8);
+    if (sx >= X_WRAP) {
+        sx -= X_WRAP;
+    }
+    return sx;
 }
 
 /* Sprites over [x0, x1); collisions */
@@ -291,10 +320,7 @@ static void draw_sprites(int x0, int x1)
         if (!(s_sline & (1u << i))) {
             continue;
         }
-        int sx = r[i * 2] | ((r[0x10] >> i) & 1) << 8;
-        if (sx >= X_WRAP + WIN_X0) {
-            sx -= X_WRAP;
-        }
+        int sx = sprite_x(i);
         int wx = sx - WIN_X0;
         bool xexp = (r[0x1D] >> i) & 1, mc = (r[0x1C] >> i) & 1, behind = (r[0x1B] >> i) & 1;
         int w = xexp ? 48 : 24;
@@ -342,10 +368,7 @@ static void sprite_collisions(int x0, int x1)
             if (!(s_sline & (1u << i))) {
                 continue;
             }
-            int sx = r[i * 2] | ((r[0x10] >> i) & 1) << 8;
-            if (sx >= X_WRAP + WIN_X0) {
-                sx -= X_WRAP;
-            }
+            int sx = sprite_x(i);
             int dx = x - (sx - WIN_X0);
             bool xexp = (r[0x1D] >> i) & 1;
             if (dx < 0 || dx >= (xexp ? 48 : 24)) {
@@ -425,15 +448,21 @@ static void draw(int x1)
     if (s_out == NULL) {
         return;
     }
+    /* Playfield, then border (covers playfield only), then sprites: sprites
+     * show in the border. Drawing sprites before the border hid them there
+     * and broke open-border demos (Unity).
+     */
     bool rsel = r[0x11] & 0x08;
-    if (s_vborder && s_mborder && s_line != (rsel ? 51 : 55) && s_line != (rsel ? 251 : 247)) {
-        memset(s_pix + x0, r[0x20] & 15, x1 - x0);  /* all border */
-        return;
+    bool all_border = s_vborder && s_mborder
+        && s_line != (rsel ? 51 : 55) && s_line != (rsel ? 251 : 247);
+    if (all_border) {
+        memset(s_pix + x0, r[0x20] & 15, x1 - x0);
+    } else {
+        draw_graphics(x0, x1);
+        draw_border(x0, x1);
     }
-    draw_graphics(x0, x1);
     sprite_collisions(x0, x1);
     draw_sprites(x0, x1);
-    draw_border(x0, x1);
 }
 
 /* The finished line into the frame, if it changed */
@@ -442,12 +471,12 @@ static void commit_line(void)
     if (s_out == NULL) {
         return;
     }
+    int y = s_line - WIN_Y0;
     uint32_t h = 2166136261u;
     const uint32_t *w = (const uint32_t *)s_pix;
     for (int i = 0; i < WIN_W / 4; i++) {
         h = (h ^ w[i]) * 16777619u;
     }
-    int y = s_line - WIN_Y0;
     if (h == s_hash[y]) {
         return;
     }
@@ -507,7 +536,21 @@ static void make_stalls(void)
     }
     s_stall = m;
     /* (at the C128's 2 MHz the VIC gets no cycles from the CPU) */
-    m6502_set_stall_from(&cbm.cpu, m && !cbm.fast ? cbm.line_start + __builtin_ctzll(m) : UINT64_MAX);
+    if (!m || cbm.fast) {
+        m6502_set_stall_from(&cbm.cpu, UINT64_MAX);
+        return;
+    }
+    /* A mid-line bad line (FLI) must not aim the stall at a cycle already past */
+    int k0 = cbm_line_cycle();
+    if (k0 < 0) {
+        k0 = 0;
+    }
+    if (k0 > 62) {
+        k0 = 62;
+    }
+    uint64_t rest = m >> k0;
+    m6502_set_stall_from(&cbm.cpu,
+                         rest ? cbm.line_start + k0 + __builtin_ctzll(rest) : UINT64_MAX);
 }
 
 void vic_cpu_stall(void *ctx, m6502_t *cpu)
@@ -523,6 +566,50 @@ void vic_cpu_stall(void *ctx, m6502_t *cpu)
     cpu->cycles = cbm.line_start + k;
     uint64_t rest = k < 63 ? s_stall >> k : 0;
     m6502_set_stall_from(cpu, rest ? cpu->cycles + __builtin_ctzll(rest) : UINT64_MAX);
+}
+
+/* C-accesses for a bad line: screen codes + colours into the line buffers */
+static void badline_fetch(void)
+{
+    s_display = true;
+    s_rc = 0;
+    uint16_t vm = (r[0x18] & 0xF0) << 6;
+    for (int i = 0; i < 40; i++) {
+        s_vm[i] = vmem(vm | ((s_vc + i) & 0x3FF));
+        s_col[i] = vic_color[(s_vc + i) & 0x3FF] & 0x0F;    /* (the C128's Z80 stores whole bytes) */
+    }
+}
+
+static bool badline_condition(void)
+{
+    return s_line >= 0x30 && s_line <= 0xF7 && (s_line & 7) == (r[0x11] & 7) && s_den_seen;
+}
+
+/* FLI (and similar): $D011's YSCROLL can make a bad line after line_start.
+ * The VIC checks the condition every cycle (Bauer 3.6.3); c-accesses run in
+ * 12-54 for cycles where it is true. Raster IRQs often write $D011 a few
+ * cycles into the line — refusing anything past cycle 12 missed those FLI
+ * lines entirely (Padua colours / portrait).
+ */
+static void badline_maybe_from_d011(void)
+{
+    int k = cbm_line_cycle();
+    if (k >= 54) {
+        return;                         /* no c-accesses left this line */
+    }
+    if (!badline_condition()) {
+        return;
+    }
+    if (s_badline) {
+        return;                         /* already fetching this line */
+    }
+    s_badline = true;
+#ifndef ESP_PLATFORM
+    s_badline_count++;
+    s_d011_bl++;
+#endif
+    badline_fetch();
+    make_stalls();
 }
 
 void vic_line_start(int line)
@@ -545,18 +632,33 @@ void vic_line_start(int line)
             }
         }
     }
-    s_badline = line >= 0x30 && line <= 0xF7 && (line & 7) == (r[0x11] & 7) && s_den_seen;
+#ifndef ESP_PLATFORM
+    if (line == 0) {
+        s_badline_count = 0;
+        s_d011_bl = 0;
+        s_diag_w22 = s_diag_w23 = s_diag_w27 = s_diag_w15 = s_diag_w12 = 0;
+    }
+#endif
+    s_badline = badline_condition();
     s_vc = s_vcbase;
     if (s_badline) {
-        s_display = true;
-        s_rc = 0;
-        uint16_t vm = (r[0x18] & 0xF0) << 6;
-        for (int i = 0; i < 40; i++) {
-            s_vm[i] = vmem(vm | ((s_vc + i) & 0x3FF));
-            s_col[i] = vic_color[(s_vc + i) & 0x3FF] & 0x0F;    /* (the C128's Z80 stores whole bytes) */
-        }
+#ifndef ESP_PLATFORM
+        s_badline_count++;
+#endif
+        badline_fetch();
     }
     make_stalls();
+#ifndef ESP_PLATFORM
+    if (line == 100) {                  /* Padua logo mid-height */
+        s_diag_d011 = r[0x11];
+        s_diag_d016 = r[0x16];
+        s_diag_d018 = r[0x18];
+        s_diag_d015 = r[0x15];
+        s_diag_den = s_den_seen | (s_sline ? 0x80 : 0) | (s_display ? 0x40 : 0);
+        s_diag_sline = s_sline;
+        s_diag_sdata0 = s_sdata[0];
+    }
+#endif
     int y = line - WIN_Y0;
     s_out = y >= 0 && y < CBM_SCREEN_HEIGHT ? cbm.cfg.frame + y * CBM_SCREEN_WIDTH : NULL;
     s_x = 0;
@@ -564,7 +666,10 @@ void vic_line_start(int line)
 
 void vic_line_end(void)
 {
-    if (s_out && s_x == 0 && !s_sline) {
+    /* No line-key on bad lines (FLI): c-accesses + $D018 change every line;
+     * a stale key looked like "unchanged" and kept a wrong row (board shred).
+     */
+    if (s_out && s_x == 0 && !s_sline && !s_badline) {
         int y = s_line - WIN_Y0;
         uint32_t key = line_key();
         if (key == s_key[y]) {
@@ -581,7 +686,7 @@ void vic_line_end(void)
         draw(WIN_W);
         commit_line();
         if (s_out) {
-            s_key[s_line - WIN_Y0] = 0;     /* drawn in parts or with sprites: no key */
+            s_key[s_line - WIN_Y0] = 0;     /* drawn in parts, sprites, or FLI */
         }
     }
     /* cycle 58: RC and VCBASE */
@@ -604,6 +709,17 @@ void vic_line_end(void)
     } else if (s_line == (rsel ? 51 : 55) && (r[0x11] & 0x10)) {
         s_vborder = false;
     }
+#ifndef ESP_PLATFORM
+    /* Sample after the CPU finished the line (raster IRQs have run). */
+    if (s_line < 312) {
+        s_diag_bg1[s_line] = r[0x22] & 15;
+        s_diag_bg2[s_line] = r[0x23] & 15;
+        s_diag_spcol[s_line] = r[0x27] & 15;
+        s_diag_spena[s_line] = r[0x15];
+        s_diag_spy[s_line] = r[1];
+        s_diag_spr[s_line] = s_sline;
+    }
+#endif
     /* sprites: cycles 55-58, then the s-accesses for the next line */
     s_sline = 0;
     uint16_t vm = (r[0x18] & 0xF0) << 6;
@@ -643,6 +759,51 @@ void vic_frame_end(void)
         s_dirty = false;
         s_sig++;
     }
+#ifndef ESP_PLATFORM
+    /* Host: CBM_VIC_DIAG=<frame> prints one sample of VIC state */
+    {
+        static int want = -2;
+        if (want == -2) {
+            const char *e = getenv("CBM_VIC_DIAG");
+            want = e ? atoi(e) : -1;
+        }
+        if (want >= 0 && (int)cbm.frames >= 2000 && (int)cbm.frames <= 4000 &&
+            (r[0x15] || s_diag_w22 || s_diag_w27 || (cbm.frames % 100) == 0)) {
+            printf("vic f%u D015=%02X D018=%02X MCM=%d bg=%X/%X/%X sp=%X/%d "
+                   "w22=%u w27=%u w15=%u w12=%u\n",
+                   cbm.frames, r[0x15], r[0x18], (r[0x16] >> 4) & 1,
+                   r[0x21] & 15, r[0x22] & 15, r[0x23] & 15,
+                   r[0x27] & 15, r[1], s_diag_w22, s_diag_w27, s_diag_w15,
+                   s_diag_w12);
+        }
+        if (want >= 0 && (int)cbm.frames == want) {
+            printf("vic diag frame %u: @100 D011=%02X D016=%02X D018=%02X D015=%02X "
+                   "den=%d disp=%d spr=%d | badlines=%d midBL=%d bank=%d "
+                   "w22=%u w23=%u w27=%u w15=%u\n"
+                   "  vm: %02X %02X %02X %02X %02X  col: %X %X %X %X %X  "
+                   "bg=%X/%X/%X/%X  sprline=%02X\n",
+                   cbm.frames, s_diag_d011, s_diag_d016, s_diag_d018, s_diag_d015,
+                   s_diag_den & 1, (s_diag_den >> 6) & 1, (s_diag_den >> 7) & 1,
+                   s_badline_count, s_d011_bl, s_bank,
+                   s_diag_w22, s_diag_w23, s_diag_w27, s_diag_w15,
+                   s_vm[5], s_vm[10], s_vm[15], s_vm[20], s_vm[25],
+                   s_col[5] & 15, s_col[10] & 15, s_col[15] & 15, s_col[20] & 15, s_col[25] & 15,
+                   r[0x21] & 15, r[0x22] & 15, r[0x23] & 15, r[0x24] & 15, s_diag_sline);
+            printf("  sdata0=%06X pri=%02X mc=%02X xe=%02X\n",
+                   s_diag_sdata0 & 0xFFFFFF, r[0x1B], r[0x1C], r[0x1D]);
+            printf("  sprite X/Y:");
+            for (int i = 0; i < 8; i++) {
+                printf(" %d=%d/%d", i, r[i * 2] | (((r[0x10] >> i) & 1) << 8), r[1 + i * 2]);
+            }
+            printf("\n  line D022/D023/D027/D015/spy/spr:");
+            for (int L = 50; L <= 160; L += 10) {
+                printf(" %d:%X/%X/%X/%02X/%02X/%02X", L, s_diag_bg1[L], s_diag_bg2[L],
+                       s_diag_spcol[L], s_diag_spena[L], s_diag_spy[L], s_diag_spr[L]);
+            }
+            printf("\n");
+        }
+    }
+#endif
 }
 
 uint32_t vic_signature(void)
@@ -693,11 +854,25 @@ void vic_write(uint8_t reg, uint8_t v)
         if (s_line == 0x30 && (v & 0x10)) {
             s_den_seen = true;
         }
+        badline_maybe_from_d011();
         raster_compare();
         break;
     case 0x12:
         r[0x12] = v;
+#ifndef ESP_PLATFORM
+        s_diag_w12++;
+#endif
         raster_compare();
+        break;
+    case 0x18:
+        /* FLI: $D018 often written after $D011 on the same bad line. The
+         * c-accesses (cycles 12-54) must see the new video matrix; re-fetch
+         * while they can still matter.
+         */
+        r[0x18] = v;
+        if (s_badline && cbm_line_cycle() < 54) {
+            badline_fetch();
+        }
         break;
     case 0x19:
         s_irq &= ~(v & 0x0F);           /* writing 1 acknowledges */
@@ -716,6 +891,17 @@ void vic_write(uint8_t reg, uint8_t v)
         break;
     default:
         if (reg < 0x2F) {
+#ifndef ESP_PLATFORM
+            if (reg == 0x22) {
+                s_diag_w22++;
+            } else if (reg == 0x23) {
+                s_diag_w23++;
+            } else if (reg == 0x27) {
+                s_diag_w27++;
+            } else if (reg == 0x15) {
+                s_diag_w15++;
+            }
+#endif
             r[reg] = v;
         }
         break;

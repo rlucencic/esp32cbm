@@ -1,6 +1,8 @@
 # Commodore 64 and 128 (platform independent; host build in host/)
-idf_component_register(SRCS "cbm.c" "vic.c" "cia.c" "sid.c" "input.c" "cart.c" "prg.c"
-                            "via.c" "gcr.c" "drive.c" "c128.c" "vdc.c" "space.c"
+set(CBM_SRCS cbm.c vic.c cia.c sid.c input.c cart.c prg.c
+             via.c gcr.c drive.c c128.c vdc.c space.c)
+
+idf_component_register(SRCS ${CBM_SRCS}
                        INCLUDE_DIRS "include"
                        PRIV_INCLUDE_DIRS "."
                        REQUIRES m6502 z80
