@@ -272,8 +272,21 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   and status through gameplay/game-over/restarts. P4 title/play checkpoints
   also match; live runs stay near 50 FPS with lower draw share after the
   collision change. This game run does not isolate an extra conversion gain.
-  Next profile/rewrite `char_pixels` mask/palette expansion in a bounded C
-  kernel experiment; preserve guest timing and partial-span behavior.
+  The character-expansion follow-up below tests that arithmetic while
+  preserving guest timing and partial-span behavior.
+
+- **VIC character expansion** (2026-11-08):
+  [experiment](docs/char-pixels-experiment-2026-11-08.md).
+  `python3 tools/test_vic_char_pixels.py --reference /path/to/old-vic.c`
+  checks 17,039,360 actual-source pixel/foreground/fetch-call/canary cases
+  against an independent per-pixel oracle under ASan/UBSan. The oracle
+  stubs `g_byte` to isolate arithmetic; it does not validate VRAM mapping.
+  Four local 16-bit palette pairs reduce multicolor P4 row-kernel cycles
+  15–17%, at −24 P4 draw text bytes and unchanged 272-byte draw stack.
+  Full-app idle ranges overlap; no whole-app speed gain is established.
+  Native/host tests, S3/P4 builds and C64/C128 board checks pass. The report
+  records control regressions and the excluded queued-typing harness attempt.
+  Next return to Apple IIgs active-audio/CPU profiling in the project survey.
 
 - **Debugger** (esp32emu's `components/emudbg`, the VS Code extension
   `../esp32emu-vscode`): the board serves it on port 6502;

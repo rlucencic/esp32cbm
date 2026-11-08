@@ -213,7 +213,15 @@ static inline void char_pixels(int col, uint8_t mode, const uint8_t bg[4], uint1
             c2 = bg[2];
             c3 = color & 7;
         }
-        *px = (REP(bg[0]) & ~hi & ~lo) | (REP(c1) & ~hi & lo) | (REP(c2) & hi & ~lo) | (REP(c3) & hi & lo);
+        /* One lookup emits both pixels of a multicolour pair. */
+        const uint16_t pair[4] = {
+            bg[0] * 0x0101u, c1 * 0x0101u,
+            c2 * 0x0101u, c3 * 0x0101u
+        };
+        *px = (uint64_t)pair[data >> 6] |
+              ((uint64_t)pair[(data >> 4) & 3] << 16) |
+              ((uint64_t)pair[(data >> 2) & 3] << 32) |
+              ((uint64_t)pair[data & 3] << 48);
         *fg = hi & REP(1);
         return;
     }
