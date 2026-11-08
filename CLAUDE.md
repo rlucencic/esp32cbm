@@ -263,7 +263,17 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   Full-app commit share falls from 18.5–19.3% to 15.1–15.3%; idle rises to
   34.4–35.3%, with both builds near 50 FPS. Native/host regressions,
   S3/P4 builds and C64/C128 board controls pass; Tab5 is restored to MSX.
-  S3 timing requires attached S3 hardware; real-game coverage remains open.
+  S3 timing requires attached S3 hardware; broader game coverage remains open.
+
+- **ARE-TYPE game validation** (2026-11-08):
+  [report](docs/aretype-validation-2026-11-08.md). Build the pinned external
+  game, then use `python3 tools/replay_aretype.py --help` for three-build
+  replay arguments. All 6,000-frame runs match pictures, visible RAM, PCM
+  and status through gameplay/game-over/restarts. P4 title/play checkpoints
+  also match; live runs stay near 50 FPS with lower draw share after the
+  collision change. This game run does not isolate an extra conversion gain.
+  Next profile/rewrite `char_pixels` mask/palette expansion in a bounded C
+  kernel experiment; preserve guest timing and partial-span behavior.
 
 - **Debugger** (esp32emu's `components/emudbg`, the VS Code extension
   `../esp32emu-vscode`): the board serves it on port 6502;
