@@ -233,6 +233,16 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 
 ## Testing
 
+- The initial Tab5 optimization baseline is in
+  `docs/profile-baseline-2026-11-08.md`; `tools/profile_fixture.py` generates
+  the original C64 animated-character/eight-sprite/three-voice workload.
+  It reaches only 48.77–48.85 FPS on P4. DWARF-resolved profiles attribute
+  44.88–45.03% of core 1 to sprite-sprite collision scanning, including
+  inlined helpers. Target that scan before SID or a shared CPU rewrite.
+  These are synthetic-workload costs, not general game shares; no new
+  production optimization is selected yet. S3 timing remains unmeasured.
+
+
 - **Debugger** (esp32emu's `components/emudbg`, the VS Code extension
   `../esp32emu-vscode`): the board serves it on port 6502;
   `CBM_DEBUG=<port> build/cbm_host ...` serves it from the host build, which
