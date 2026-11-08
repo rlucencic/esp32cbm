@@ -361,24 +361,58 @@ static void sprite_collisions(int x0, int x1)
     if (!s_sline || !(s_sline & (s_sline - 1))) {
         return;
     }
+    struct {
+        int x;
+        uint32_t data;
+        uint8_t bit, expand, multi;
+    } active[8];
+    int count = 0, left = x1, right = x0;
+    for (int i = 0; i < 8; i++) {
+        if (!(s_sline & (1u << i))) {
+            continue;
+        }
+        int x = sprite_x(i) - WIN_X0;
+        bool expand = (r[0x1D] >> i) & 1;
+        int a = x > x0 ? x : x0;
+        int b = x + (expand ? 48 : 24);
+        if (b > x1) {
+            b = x1;
+        }
+        if (a >= b) {
+            continue;
+        }
+        active[count].x = x;
+        active[count].data = s_sdata[i];
+        active[count].bit = 1u << i;
+        active[count].expand = expand;
+        active[count].multi = (r[0x1C] >> i) & 1;
+        count++;
+        if (a < left) {
+            left = a;
+        }
+        if (b > right) {
+            right = b;
+        }
+    }
+    if (count < 2) {
+        return;
+    }
+    /* Decode each visible sprite once; only their union can collide. */
     uint8_t ss = 0;
-    for (int x = x0; x < x1; x++) {
+    for (int x = left; x < right; x++) {
         uint8_t m = 0;
-        for (int i = 0; i < 8; i++) {
-            if (!(s_sline & (1u << i))) {
+        for (int i = 0; i < count; i++) {
+            int dx = x - active[i].x;
+            bool expand = active[i].expand;
+            if (dx < 0 || dx >= (expand ? 48 : 24)) {
                 continue;
             }
-            int sx = sprite_x(i);
-            int dx = x - (sx - WIN_X0);
-            bool xexp = (r[0x1D] >> i) & 1;
-            if (dx < 0 || dx >= (xexp ? 48 : 24)) {
-                continue;
-            }
-            int bitpos = dx >> xexp;
-            bool on = (r[0x1C] >> i) & 1 ? ((s_sdata[i] >> (22 - (bitpos & ~1))) & 3) != 0
-                                         : ((s_sdata[i] >> (23 - bitpos)) & 1);
+            int bitpos = dx >> expand;
+            uint32_t data = active[i].data;
+            bool on = active[i].multi ? ((data >> (22 - (bitpos & ~1))) & 3) != 0
+                                     : ((data >> (23 - bitpos)) & 1);
             if (on) {
-                m |= 1u << i;
+                m |= active[i].bit;
             }
         }
         if (m & (m - 1)) {

@@ -239,8 +239,16 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   It reaches only 48.77–48.85 FPS on P4. DWARF-resolved profiles attribute
   44.88–45.03% of core 1 to sprite-sprite collision scanning, including
   inlined helpers. Target that scan before SID or a shared CPU rewrite.
-  These are synthetic-workload costs, not general game shares; no new
-  production optimization is selected yet. S3 timing remains unmeasured.
+  These are synthetic-workload costs, not general game shares. The retained
+  follow-up is in `docs/sprite-collision-experiment-2026-11-08.md`: visible
+  descriptors/span bounds save 43–96% in full-width P4 kernels and bring
+  the generated workload to the PAL cap with 31–32% core-1 idle. Cost:
+  +170 P4 text bytes, +80 draw-stack bytes, and +7.8% in a dense four-pixel
+  partial call. Run `python3 tools/test_vic_collisions.py` for 819,200
+  actual-source/oracle cases and 16,384 split-call properties. Seven host
+  replay pairs match pictures, RAM, PCM and status; S3/P4 builds and
+  C64/C128 board controls pass. Next profile `commit_line` hashing and
+  RGB565 conversion. S3 runtime and real-game performance remain open.
 
 
 - **Debugger** (esp32emu's `components/emudbg`, the VS Code extension

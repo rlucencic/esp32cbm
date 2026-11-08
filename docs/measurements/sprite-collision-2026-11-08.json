@@ -1,0 +1,596 @@
+{
+  "reference": {
+    "esp32cbm": "abfd450",
+    "shared_code": "288b73b"
+  },
+  "board": {
+    "type": "Tab5 ESP32-P4",
+    "cpu_mhz": 360,
+    "psram_mhz": 200,
+    "idf": "5.5.6",
+    "gcc": "14.2"
+  },
+  "native": {
+    "cases": 819200,
+    "split_properties": 16384
+  },
+  "host": {
+    "programs": 7,
+    "frames_each": 2000,
+    "pictures": 35,
+    "ram_snapshots": 14,
+    "pcm_captures": 7
+  },
+  "kernel": {
+    "0": {
+      "reference": 11.603515625,
+      "candidate": 11.072265625,
+      "change_percent": -4.696969696969699
+    },
+    "1": {
+      "reference": 16.072265625,
+      "candidate": 14.078125,
+      "change_percent": -12.504557054320086
+    },
+    "2": {
+      "reference": 42696.494140625,
+      "candidate": 2004.279296875,
+      "change_percent": -95.30577035722479
+    },
+    "3": {
+      "reference": 43073.123046875,
+      "candidate": 10322.12890625,
+      "change_percent": -76.03630889495284
+    },
+    "4": {
+      "reference": 74022.771484375,
+      "candidate": 38330.76171875,
+      "change_percent": -48.21694530862335
+    },
+    "5": {
+      "reference": 77254.060546875,
+      "candidate": 5969.314453125,
+      "change_percent": -92.27314313579193
+    },
+    "6": {
+      "reference": 76831.7265625,
+      "candidate": 43669.591796875,
+      "change_percent": -43.16193311819195
+    },
+    "7": {
+      "reference": 34973.03125,
+      "candidate": 148.8671875,
+      "change_percent": -99.57434061328905
+    },
+    "8": {
+      "reference": 41687.10546875,
+      "candidate": 163.125,
+      "change_percent": -99.60870901663826
+    },
+    "9": {
+      "reference": 40606.857421875,
+      "candidate": 172.63671875,
+      "change_percent": -99.57486526200857
+    },
+    "10": {
+      "reference": 42851.42578125,
+      "candidate": 1709.62890625,
+      "change_percent": -96.0103655754599
+    },
+    "11": {
+      "reference": 41437.71484375,
+      "candidate": 1541.333984375,
+      "change_percent": -96.28018830465852
+    },
+    "12": {
+      "reference": 1041.67578125,
+      "candidate": 655.1171875,
+      "change_percent": -37.103675342840745
+    },
+    "13": {
+      "reference": 177.7734375,
+      "candidate": 259.599609375,
+      "change_percent": 46.02600997341886
+    },
+    "14": {
+      "reference": 18.853515625,
+      "candidate": 243.58984375,
+      "change_percent": 1191.9937856033143
+    },
+    "15": {
+      "reference": 4039.259765625,
+      "candidate": 245.0,
+      "change_percent": -93.93453221095102
+    },
+    "16": {
+      "reference": 76439.611328125,
+      "candidate": 32763.662109375,
+      "change_percent": -57.13629602949191
+    },
+    "17": {
+      "reference": 563.265625,
+      "candidate": 457.044921875,
+      "change_percent": -18.856082803099916
+    },
+    "18": {
+      "reference": 1245.46875,
+      "candidate": 1343.166015625,
+      "change_percent": 7.8442165349391635
+    },
+    "19": {
+      "reference": 2447.263671875,
+      "candidate": 2267.095703125,
+      "change_percent": -7.364335827820545
+    },
+    "20": {
+      "reference": 4847.166015625,
+      "candidate": 4119.119140625,
+      "change_percent": -15.017435755265984
+    },
+    "21": {
+      "reference": 309.232421875,
+      "candidate": 324.224609375,
+      "change_percent": 4.852891016814254
+    }
+  },
+  "sizes": {
+    "reference": [
+      {
+        "name": "commit_line",
+        "text": 170,
+        "frame": null
+      },
+      {
+        "name": "draw",
+        "text": 2578,
+        "frame": 192
+      },
+      {
+        "name": "vic_line_end",
+        "text": 2132,
+        "frame": 112
+      }
+    ],
+    "candidate": [
+      {
+        "name": "commit_line",
+        "text": 170,
+        "frame": null
+      },
+      {
+        "name": "draw",
+        "text": 2748,
+        "frame": 272
+      },
+      {
+        "name": "vic_line_end",
+        "text": 2132,
+        "frame": 112
+      }
+    ]
+  },
+  "checkpoint": {
+    "cpu_bytes": 65536,
+    "equal": true,
+    "picture_size": [
+      400,
+      300
+    ],
+    "picture_equal": true
+  },
+  "candidate_inline": [
+    {
+      "draw": 22.828,
+      "sprite_collisions": 6.056,
+      "draw_sprites": 3.0,
+      "draw_graphics": 13.128,
+      "char_pixels": 11.65,
+      "commit_line": 18.706,
+      "m6502_run": 11.55
+    },
+    {
+      "draw": 23.234,
+      "sprite_collisions": 7.006,
+      "draw_sprites": 2.794,
+      "draw_graphics": 12.953,
+      "char_pixels": 11.541,
+      "commit_line": 18.803,
+      "m6502_run": 11.269
+    },
+    {
+      "draw": 22.078,
+      "sprite_collisions": 5.494,
+      "draw_sprites": 2.644,
+      "draw_graphics": 13.425,
+      "char_pixels": 11.944,
+      "commit_line": 18.669,
+      "m6502_run": 11.294
+    }
+  ],
+  "firmware": {
+    "reference": {
+      "c64-basic": {
+        "fps": [
+          50.10362865312333,
+          50.1113056148859
+        ],
+        "elapsed": 30.055400821001967,
+        "frames": 1506,
+        "redraws": 90,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": [
+            76.8,
+            78.7
+          ],
+          "draw": [
+            1.0,
+            1.1
+          ],
+          "commit_line": [
+            0.2,
+            0.3
+          ],
+          "m6502_run": [
+            8.5,
+            8.8
+          ],
+          "vic_line_end": [
+            5.2,
+            5.3
+          ],
+          "vdc_frame_end": null
+        },
+        "draw_and_commit_percent": [
+          1.2,
+          1.3
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            85.1,
+            85.8
+          ],
+          "present_task": [
+            0.5,
+            0.5
+          ],
+          "cbm_audio_render": [
+            2.4,
+            2.5
+          ],
+          "env_clock": [
+            2.8,
+            3.0
+          ],
+          "osc_clock.part.0": [
+            1.1,
+            1.2
+          ]
+        }
+      },
+      "c64-fixture": {
+        "fps": [
+          48.752507784736316,
+          48.70797341505212
+        ],
+        "elapsed": 30.06346430699341,
+        "frames": 1465,
+        "redraws": 1465,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": null,
+          "draw": [
+            60.2,
+            60.6
+          ],
+          "commit_line": [
+            16.1,
+            16.5
+          ],
+          "m6502_run": [
+            9.9,
+            10.3
+          ],
+          "vic_line_end": [
+            2.8,
+            3.1
+          ],
+          "vdc_frame_end": null
+        },
+        "draw_and_commit_percent": [
+          76.4,
+          76.7
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            58.8,
+            60.8
+          ],
+          "present_task": [
+            8.2,
+            8.7
+          ],
+          "cbm_audio_render": [
+            2.6,
+            2.6
+          ],
+          "env_clock": [
+            1.6,
+            1.9
+          ],
+          "osc_clock.part.0": [
+            1.3,
+            1.3
+          ]
+        }
+      }
+    },
+    "candidate": {
+      "c64-basic": {
+        "fps": [
+          50.11212207983769,
+          50.11011008927805
+        ],
+        "elapsed": 30.053212106984574,
+        "frames": 1506,
+        "redraws": 90,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": [
+            74.8,
+            78.8
+          ],
+          "draw": [
+            1.1,
+            1.1
+          ],
+          "commit_line": [
+            0.2,
+            0.2
+          ],
+          "m6502_run": [
+            8.7,
+            8.8
+          ],
+          "vic_line_end": [
+            5.2,
+            5.5
+          ],
+          "vdc_frame_end": null
+        },
+        "draw_and_commit_percent": [
+          1.3,
+          1.3
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            85.6,
+            86.5
+          ],
+          "present_task": [
+            0.4,
+            0.5
+          ],
+          "cbm_audio_render": [
+            2.4,
+            2.6
+          ],
+          "env_clock": [
+            2.8,
+            3.0
+          ],
+          "osc_clock.part.0": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "c64-fixture": {
+        "fps": [
+          50.04917178582088,
+          50.17193719259592
+        ],
+        "elapsed": 30.073525461019017,
+        "frames": 1507,
+        "redraws": 1507,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": [
+            31.2,
+            32.0
+          ],
+          "draw": [
+            21.3,
+            23.1
+          ],
+          "commit_line": [
+            18.8,
+            18.9
+          ],
+          "m6502_run": [
+            11.2,
+            11.4
+          ],
+          "vic_line_end": [
+            3.3,
+            3.5
+          ],
+          "vdc_frame_end": null
+        },
+        "draw_and_commit_percent": [
+          40.1,
+          42.0
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            59.8,
+            60.6
+          ],
+          "present_task": [
+            8.3,
+            8.6
+          ],
+          "cbm_audio_render": [
+            2.6,
+            2.7
+          ],
+          "env_clock": [
+            1.7,
+            1.8
+          ],
+          "osc_clock.part.0": [
+            1.2,
+            1.3
+          ]
+        }
+      },
+      "c128-40": {
+        "fps": [
+          50.121697895408666,
+          50.11319826784792
+        ],
+        "elapsed": 30.049415292975027,
+        "frames": 1506,
+        "redraws": 76,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": [
+            79.1,
+            79.3
+          ],
+          "draw": [
+            1.1,
+            1.2
+          ],
+          "commit_line": [
+            0.3,
+            0.3
+          ],
+          "m6502_run": [
+            9.2,
+            9.4
+          ],
+          "vic_line_end": [
+            5.0,
+            5.2
+          ],
+          "vdc_frame_end": null
+        },
+        "draw_and_commit_percent": [
+          1.4000000000000001,
+          1.5
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            86.2,
+            86.9
+          ],
+          "present_task": [
+            0.3,
+            0.3
+          ],
+          "cbm_audio_render": [
+            2.5,
+            2.6
+          ],
+          "env_clock": [
+            2.7,
+            2.9
+          ],
+          "osc_clock.part.0": [
+            1.0,
+            1.1
+          ]
+        }
+      },
+      "c128-80": {
+        "fps": [
+          50.16882774658682,
+          50.11281845909037
+        ],
+        "elapsed": 30.05534848300158,
+        "frames": 1507,
+        "redraws": 188,
+        "core1_percent": {
+          "esp_cpu_wait_for_intr": [
+            71.6,
+            72.0
+          ],
+          "draw": [
+            1.1,
+            1.1
+          ],
+          "commit_line": [
+            0.3,
+            0.4
+          ],
+          "m6502_run": [
+            9.2,
+            9.6
+          ],
+          "vic_line_end": [
+            5.3,
+            5.5
+          ],
+          "vdc_frame_end": [
+            6.8,
+            7.0
+          ]
+        },
+        "draw_and_commit_percent": [
+          1.4000000000000001,
+          1.5
+        ],
+        "core0_percent": {
+          "esp_cpu_wait_for_intr": [
+            84.5,
+            85.3
+          ],
+          "present_task": [
+            1.1,
+            1.1
+          ],
+          "cbm_audio_render": [
+            2.5,
+            2.6
+          ],
+          "env_clock": [
+            2.9,
+            2.9
+          ],
+          "osc_clock.part.0": [
+            1.0,
+            1.1
+          ]
+        }
+      }
+    }
+  },
+  "artifact_sha256": {
+    "reference": {
+      "elf": "dab4400f4eecaa14364e02acae6906ef669e1abd331b57b5ea795a8cb32f7b89",
+      "bin": "ce3df1e551b70fec7867c4f3428d050044c722f7772678cbe6172e0193328f36"
+    },
+    "candidate": {
+      "elf": "c4a584f4258c45d439fa4497ed3eeee7f3c80d9eaafbd8cf9a8f6bb6312d68bf",
+      "bin": "089d4aeb8c2b52f82d243128a19323c8c289fbaac9cd478685d4c6517b54e474"
+    }
+  },
+  "note": "Ranges derive from rounded flat-symbol profiler percentages. Null means a symbol is absent from at least one top-40 listing. Inline-frame values are inclusive and overlap.",
+  "valid_32000_sample_captures": 39,
+  "fixture_sha256": "7df5c1647a9666010c0a3ef8584ad168ba7825dcab84f5c4ab6ff065661b9823",
+  "builds": [
+    "P4 candidate test",
+    "P4 normal",
+    "S3 normal"
+  ],
+  "control_title_pixels": {
+    "c64-basic": {
+      "rows": 100,
+      "match": true
+    },
+    "c128-40": {
+      "rows": 100,
+      "match": true
+    },
+    "c128-80": {
+      "rows": 45,
+      "match": true
+    }
+  }
+}
