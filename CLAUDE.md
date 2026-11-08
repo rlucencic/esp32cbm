@@ -247,9 +247,23 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   partial call. Run `python3 tools/test_vic_collisions.py` for 819,200
   actual-source/oracle cases and 16,384 split-call properties. Seven host
   replay pairs match pictures, RAM, PCM and status; S3/P4 builds and
-  C64/C128 board controls pass. Next profile `commit_line` hashing and
-  RGB565 conversion. S3 runtime and real-game performance remain open.
+  C64/C128 board controls pass. The row-conversion follow-up below separates
+  `commit_line` hashing from RGB565 stores. S3 runtime and real-game
+  performance remain open.
 
+
+- **VIC row conversion** (2026-11-08):
+  [experiment](docs/vic-conversion-experiment-2026-11-08.md).
+  `python3 tools/test_vic_commit_line.py` extracts the actual hash/conversion
+  routine and checks 73,760 palette/row/hash/dirty/null-output cases against
+  an independent RGB565/FNV oracle under ASan/UBSan. Use `--reference PATH`
+  to also compare an older `vic.c`. Pointer/unroll variants are measured
+  separately on P4. Retain eight pixels per loop: changed-row kernel cost
+  falls about 30%, at +74 P4 text bytes with no stack frame or new RAM.
+  Full-app commit share falls from 18.5–19.3% to 15.1–15.3%; idle rises to
+  34.4–35.3%, with both builds near 50 FPS. Native/host regressions,
+  S3/P4 builds and C64/C128 board controls pass; Tab5 is restored to MSX.
+  S3 timing requires attached S3 hardware; real-game coverage remains open.
 
 - **Debugger** (esp32emu's `components/emudbg`, the VS Code extension
   `../esp32emu-vscode`): the board serves it on port 6502;

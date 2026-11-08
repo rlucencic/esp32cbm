@@ -515,9 +515,17 @@ static void commit_line(void)
         return;
     }
     s_hash[y] = h;
+    /* Advance both pointers; avoid recomputing the output index per pair. */
+    const uint8_t *p = s_pix;
     uint32_t *o = (uint32_t *)s_out;
-    for (int x = 0; x < WIN_W; x += 2) {
-        o[x >> 1] = s_rgb[s_pix[x]] | ((uint32_t)s_rgb[s_pix[x + 1]] << 16);
+    const uint8_t *end = s_pix + WIN_W;
+    while (p < end) {
+        o[0] = s_rgb[p[0]] | ((uint32_t)s_rgb[p[1]] << 16);
+        o[1] = s_rgb[p[2]] | ((uint32_t)s_rgb[p[3]] << 16);
+        o[2] = s_rgb[p[4]] | ((uint32_t)s_rgb[p[5]] << 16);
+        o[3] = s_rgb[p[6]] | ((uint32_t)s_rgb[p[7]] << 16);
+        p += 8;
+        o += 4;
     }
     s_dirty = true;
 }
