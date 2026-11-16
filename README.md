@@ -130,7 +130,7 @@ the Tab5 960 wide, every line 3.6 times).
 
 ### 1. What you need
 
-- [ESP-IDF](https://github.com/espressif/esp-idf) v5.5 (developed with v5.5.4)
+- [ESP-IDF](https://github.com/espressif/esp-idf) v5.5 (developed with v5.5.6)
 - [esp32emu](https://github.com/rlucencic/esp32emu), checked out next to this project (`../esp32emu`)
 - The Commodore ROM images in `roms/` (see [roms/README.md](roms/README.md))
 - A microSD card, FAT32 or exFAT

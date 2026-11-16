@@ -5,7 +5,7 @@ two 6526s, SID; the C128's MMU, VDC (80 columns), FAST (2 MHz) and Z80
 (start-up, CP/M 3.0). Drives 8 and 9 emulated whole (1541-II on the C64,
 1571 on the C128: their own 6502, VIAs, GCR; the 1571's CIA for fast serial).
 Disks D64/D71/G64, cartridges CRT, programs PRG/T64, an LVGL setup screen,
-a web page for images and live status. ESP-IDF v5.5.4, C.
+a web page for images and live status. ESP-IDF v5.5.6, C.
 
 The board side (tasks, LCD, touch, SD, WiFi, BLE, setup screen, web page,
 console), the 6502 core (`components/m6502`) and the Z80 core
@@ -27,7 +27,7 @@ The native USB port is the console, `/dev/cu.usbmodem1101` on the user's Mac.
 
 ```sh
 bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
-  export IDF_PYTHON_ENV_PATH=/Users/robertlucencic/.espressif/tools/python/v5.5.4/venv; \
+  export IDF_PYTHON_ENV_PATH=/Users/robertlucencic/.espressif/tools/python/v5.5.6/venv; \
   export PATH=$IDF_PYTHON_ENV_PATH/bin:$PATH; \
   idf.py build && idf.py -p /dev/cu.usbmodem1101 -b 115200 app-flash'
 ```
@@ -65,7 +65,7 @@ beside the MaTouch build, on `/dev/cu.usbmodem3101`:
 
 ```sh
 bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
-  export IDF_PYTHON_ENV_PATH=/Users/robertlucencic/.espressif/tools/python/v5.5.4/venv; \
+  export IDF_PYTHON_ENV_PATH=/Users/robertlucencic/.espressif/tools/python/v5.5.6/venv; \
   export PATH=$IDF_PYTHON_ENV_PATH/bin:$PATH; \
   idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=$PWD/build-tab5/sdkconfig build && \
   idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=$PWD/build-tab5/sdkconfig -p /dev/cu.usbmodem3101 flash'
