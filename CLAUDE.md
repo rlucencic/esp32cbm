@@ -89,7 +89,7 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 | Path | What |
 |---|---|
 | `main/main.c` | The Commodore as an `emu_machine_t`: memory, ROMs, start, key map, joystick, drives, status, console |
-| `main/rom_store.c` | ROMs from the `cbm_roms` slots, else the SD card's `roms/` |
+| `main/rom_store.c` | ROMs from the `cbm_roms` slots, else the SD card's `cbm/roms/` |
 | `main/settings.c` | NVS `cbm`: `model`, `joystick` |
 | `components/cbm/` | The C64 and C128, platform independent (`include/cbm.h`) |
 | `components/cbm/host/` | Host build: `cbm_host` (see Testing) |
@@ -167,7 +167,9 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
 ## Persistent state
 
 - NVS `cbm`: `model`, `joystick`. NVS `cbmdisks`: the four slots' files.
-- SD card: `cbm/` (all images; made if missing), `roms/` (optional ROMs).
+- SD card: `cbm/` (all images; made if missing), `cbm/roms/` (optional ROMs).
+  Until 2026-11-17 a shared `roms/`: esp32emu's `tools/sd_folders.ps1`
+  moves an old card's files.
 - A program in its slot loads 4 s after every start (and at once when
   inserted while running).
 
