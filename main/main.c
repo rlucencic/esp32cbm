@@ -58,8 +58,7 @@ static bool missing(const char *what)
 {
     static char message[200];
     snprintf(message, sizeof(message),
-             "No %s ROM: put %s into roms/ and flash with idf.py flash, or copy it into the "
-             "\"cbm/roms\" folder on the SD card.", model_full[settings.model], what);
+             "No %s ROM: put %s into roms/ and flash with idf.py flash.", model_full[settings.model], what);
     emu_set_message(message);
     return false;
 }
@@ -433,6 +432,7 @@ static bool write_protected(int drive)
 }
 
 static const char *const extensions[] = { ".d64", ".d71", ".g64", ".crt", ".prg", ".t64", NULL };
+static const char *const cart_extensions[] = { ".crt", NULL };     /* in cbm/roms */
 static const char *const drive_names[] = { "8:", "9:", "Cartridge", "Program" };
 static const disks_size_t sizes[] = {
     { CBM_D64_BYTES, "170 KB 1541 disk (.D64)" },
@@ -442,6 +442,7 @@ static const disks_size_t sizes[] = {
 static const disks_config_t disks = {
     .folder = "cbm",
     .extensions = extensions,
+    .cart_extensions = cart_extensions,
     .description = "Disks (.D64 .D71 .G64), cartridges, programs",    /* (fits the setup screen) */
     .title = "Disks, cartridge and program",
     .button = "Disks",

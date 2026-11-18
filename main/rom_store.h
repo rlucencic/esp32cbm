@@ -4,9 +4,10 @@
 #include <stdint.h>
 
 /*
- * The Commodore ROMs: from the cbm_roms flash partition (roms/<name> in the
- * project, written by idf.py flash into 16 KB slots), else from the SD
- * card's "cbm/roms" folder under the same names.
+ * The Commodore ROMs: built in, from the cbm_roms flash partition
+ * (roms/<name> in the project, written by idf.py flash into 16 KB slots).
+ * A file of the same name in the SD card's "cbm/roms" folder (the
+ * cartridges' folder) overrides one.
  */
 typedef enum {
     ROM_C64_BASIC, ROM_C64_KERNAL, ROM_C64_CHARGEN, ROM_1541,

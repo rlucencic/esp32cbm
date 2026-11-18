@@ -19,10 +19,11 @@ models you want are needed.
 The C64 needs the first three (and `1541.rom` for disks), the C128 the four
 C128 ones (and `1571.rom` for disks).
 
-Without flashing, the emulator also finds them in the `cbm/roms` folder on
-the SD card under the same names. A card set up before 2026-11-17 has them
-in a shared `roms` folder: esp32emu's `tools/sd_folders.ps1 E:\`
-(PowerShell 7, the card in a card reader) moves them there.
+A file of the same name in the `cbm/roms` folder on the SD card (with the
+cartridges) is used instead of the flashed one. A card set up before
+2026-11-17 has such files in a shared `roms` folder: esp32emu's
+`tools/sd_folders.ps1 E:\` (PowerShell 7, the card in a card reader) moves
+them there.
 
 The images are on zimmers.net, under `anonftp/pub/cbm/firmware/`:
 `computers/c64/` (the C64's, and `64c.251913-01.bin`), `computers/c128/`,

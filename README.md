@@ -148,10 +148,10 @@ idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=build-tab5/sdkconfig build
 idf.py -B build-tab5 -DIDF_TARGET=esp32p4 -DSDKCONFIG=build-tab5/sdkconfig -p /dev/cu.usbmodem… flash
 ```
 
-Later updates only need `idf.py -p … app-flash`. Instead of flashing the
-ROMs, you can also copy them into the `cbm/roms` folder on the SD card. A
-card set up before 2026-11-17 has them in a shared `roms` folder:
-esp32emu's `tools/sd_folders.ps1` moves them.
+Later updates only need `idf.py -p … app-flash`. A ROM file of the same
+name in the `cbm/roms` folder on the SD card (with the cartridges) is used
+instead of the flashed one. A card set up before 2026-11-18 has its ROMs
+and cartridges elsewhere: esp32emu's `tools/sd_folders.ps1` moves them.
 
 ### 3. First start
 
@@ -181,8 +181,8 @@ esp32emu's `tools/sd_folders.ps1` moves them.
 | CP/M | Insert the C128 CP/M system disk into 8: and reset the C128 |
 | Copy files from a computer | Drop them onto the web page (ZIP files are unpacked), or `curl -T game.d64 http://commodore.local/disks/` |
 
-Disks, cartridges and programs live in the `cbm` folder on the SD card. The
-inserted ones are remembered across restarts.
+Disks and programs live in the `cbm` folder on the SD card, cartridges in
+`cbm/roms`. The inserted ones are remembered across restarts.
 
 <p align="center">
   <img src="docs/images/setup-disks.png" width="60%" alt="The setup screen's drives page: 8: with a disk, 9:, the cartridge and the program slots; Insert, New and Eject for each">
