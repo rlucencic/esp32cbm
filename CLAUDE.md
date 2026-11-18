@@ -49,6 +49,14 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   the speed below.
 - `curl http://commodore.local/api/status`; disks: see `../esp32emu/README.md`
   (drives 1 8:, 2 9:, 3 Cartridge, 4 Program).
+- The web page's machine card (`status()` in `main/main.c`, the chips'
+  registers through `cbm_get_chips()`): System, ROM (each from the flash or
+  the SD card, those banked in), Memory ($01 and the PLA's map, or the
+  C128's MMU), Screen (the VIC-II's mode and addresses, or the VDC's while
+  80 columns are shown), Palette (swatches), Sprites, Sound (the SID's
+  voices), Interrupts (raster, CIA timers), Keyboard, Joystick, Disks.
+  The whole reply must fit esp32emu's 4 KB: the rows are at most ~1.8 KB
+  (a C128 in 40 columns with everything on).
 - Flashing restarts the board and ends the user's session: say so first.
 
 Console commands: the shared ones (`s` `L` `r` `F` `t` `i` `p`, see

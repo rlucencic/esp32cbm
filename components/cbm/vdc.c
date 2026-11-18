@@ -248,3 +248,8 @@ uint32_t vdc_signature(void)
 {
     return s_signature;
 }
+
+void vdc_get_state(cbm_chips_t *c)
+{
+    memcpy(c->vdc, r, sizeof(c->vdc));
+}

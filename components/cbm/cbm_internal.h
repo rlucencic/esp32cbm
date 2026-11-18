@@ -121,6 +121,7 @@ extern bool vic_chars_all_banks;        /* C128 mode: in all four */
 void vic_mem_changed(void);             /* one of those changed (vic_catch_up() first) */
 void vic_cpu_stall(void *ctx, m6502_t *cpu);
 uint32_t vic_signature(void);
+void vic_get_state(cbm_chips_t *chips);     /* (the web page's status) */
 
 /* ---- vdc.c: the C128's 80 columns ---- */
 
@@ -130,6 +131,7 @@ uint8_t vdc_read(uint16_t a);           /* $D600/$D601 */
 void vdc_write(uint16_t a, uint8_t v);
 void vdc_frame_end(bool shown);
 uint32_t vdc_signature(void);
+void vdc_get_state(cbm_chips_t *chips);
 
 /* ---- sid.c ---- */
 
@@ -138,6 +140,7 @@ void sid_reset(void);
 uint8_t sid_read(uint8_t reg);
 void sid_write(uint8_t reg, uint8_t v);
 void sid_frame_end(void);
+void sid_get_state(cbm_chips_t *chips);
 
 /* ---- input.c ---- */
 
@@ -264,5 +267,6 @@ void c128_8502_start(void);
 uint16_t c128_z80_pc(void);
 bool c128_fast_serial_out(void);        /* MCR bit 3: the C128 sends */
 void c128_fast_in(uint8_t byte);        /* a drive shifted a byte out */
+void c128_get_state(cbm_chips_t *chips);
 void cbm_events_changed(void);          /* (cbm.c) a CIA's events moved */
 void cbm_8502_clock_resume(void);       /* (cbm.c) after the Z80 */

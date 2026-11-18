@@ -282,6 +282,16 @@ bool c128_z80_active(void)
     return cbm.cfg.model == CBM_MODEL_C128 && mmu.z80;
 }
 
+void c128_get_state(cbm_chips_t *c)
+{
+    const uint8_t regs[11] = {
+        mmu.cr, mmu.pcr[0], mmu.pcr[1], mmu.pcr[2], mmu.pcr[3], mmu.mcr, mmu.rcr, mmu.p0l, mmu.p0h, mmu.p1l, mmu.p1h,
+    };
+    memcpy(c->mmu, regs, sizeof(c->mmu));
+    c->c128_mode = c128_mode();
+    c->z80 = c128_z80_active();
+}
+
 /* ---- The Z80 ---- */
 
 static uint8_t z_read(uint16_t a)

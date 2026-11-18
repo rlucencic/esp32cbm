@@ -75,10 +75,44 @@ typedef struct {
     uint16_t drive_pc[CBM_DRIVES];
 } cbm_status_t;
 
+/* The chips as they are now, for the web page's status: plain copies of
+ * their registers (any task may ask; a few cycles old at worst)
+ */
+enum {
+    CBM_MAP_RAM, CBM_MAP_ROML, CBM_MAP_ROMH, CBM_MAP_BASIC, CBM_MAP_KERNAL, CBM_MAP_CHARS, CBM_MAP_IO,
+    CBM_MAP_OPEN,               /* nothing (Ultimax) */
+};
+
+typedef struct {
+    bool c128_mode;             /* a C128 in its own mode (else a C64, or a C128 in C64 mode) */
+    bool z80;                   /* the C128's Z80 has the bus */
+    bool fast;                  /* the C128 at 2 MHz */
+    bool caps_lock, key_40_80;  /* the C128's locking keys down */
+    uint8_t port_ddr, port_data;    /* the 6510's $00 and $01 as written */
+    bool exrom, game;           /* the expansion port's lines (true: high) */
+    uint8_t map[4];             /* the PLA's $8000, $A000, $D000, $E000 (CBM_MAP_*; not in C128 mode) */
+    uint8_t vic[0x2F];          /* $D000-$D02E as written ($D019: the interrupt flags) */
+    uint8_t vic_bank;           /* its 16 KB, 0-3 (CIA 2 port A) */
+    uint8_t vic_ram_bank;       /* C128: its 64 KB, 0-1 (MMU RCR) */
+    bool rom_chars;             /* the character ROM at $1000 in VIC banks 0 and 2 */
+    bool rom_chars_all_banks;   /* (C128 mode: in all four) */
+    uint16_t raster;
+    uint8_t sid[25];            /* $D400-$D418 as written */
+    uint8_t sid_level[3];       /* the voices' envelopes (0-255) as last played */
+    bool sound;                 /* the SID is being played (cbm_audio_enable()) */
+    struct {
+        uint16_t latch[2];      /* timers A and B */
+        uint8_t cr[2], imr;     /* CRA, CRB, the interrupt mask */
+    } cia[2];
+    uint8_t mmu[11];            /* C128: CR, PCR A-D, MCR, RCR, P0L, P0H, P1L, P1H ($D500-$D50A) */
+    uint8_t vdc[38];            /* C128: the VDC's registers R0-R37 */
+} cbm_chips_t;
+
 bool cbm_init(const cbm_config_t *config);
 void cbm_reset(void);               /* cold reset, drives too */
 void cbm_run_frame(void);
 void cbm_get_status(cbm_status_t *status);
+void cbm_get_chips(cbm_chips_t *chips);
 cbm_model_t cbm_model(void);
 uint8_t cbm_peek(uint16_t address); /* as the CPU sees it, no side effects */
 

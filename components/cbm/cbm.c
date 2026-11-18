@@ -687,6 +687,36 @@ void cbm_get_status(cbm_status_t *s)
     drives_status(s);
 }
 
+_Static_assert((int)M_RAM == (int)CBM_MAP_RAM && (int)M_KERNAL == (int)CBM_MAP_KERNAL && (int)M_OPEN == (int)CBM_MAP_OPEN,
+               "the map's names");
+
+void cbm_get_chips(cbm_chips_t *c)
+{
+    memset(c, 0, sizeof(*c));
+    c->fast = cbm.cfg.model == CBM_MODEL_C128 && (vic_d030 & 1);
+    c->caps_lock = input_caps_lock();
+    c->key_40_80 = input_40_80();
+    c->port_ddr = cbm.port_ddr;
+    c->port_data = cbm.port_data;
+    c->exrom = cart_exrom;
+    c->game = cart_game;
+    memcpy(c->map, pla[(cart_exrom << 4) | (cart_game << 3) | port_config()], sizeof(c->map));
+    const cia_t *cias[2] = { &cbm.cia1, &cbm.cia2 };
+    for (int i = 0; i < 2; i++) {
+        c->cia[i].latch[0] = cias[i]->t[0].latch;
+        c->cia[i].latch[1] = cias[i]->t[1].latch;
+        c->cia[i].cr[0] = cias[i]->cr[0];
+        c->cia[i].cr[1] = cias[i]->cr[1];
+        c->cia[i].imr = cias[i]->imr;
+    }
+    vic_get_state(c);
+    sid_get_state(c);
+    if (cbm.cfg.model == CBM_MODEL_C128) {
+        c128_get_state(c);
+        vdc_get_state(c);
+    }
+}
+
 cbm_model_t cbm_model(void)
 {
     return cbm.cfg.model;

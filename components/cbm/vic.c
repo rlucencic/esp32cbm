@@ -866,6 +866,18 @@ uint16_t vic_raster(void)
     return s_line;
 }
 
+void vic_get_state(cbm_chips_t *c)
+{
+    memcpy(c->vic, r, sizeof(c->vic));
+    c->vic[0x19] = s_irq | ((s_irq & r[0x1A] & 0x0F) ? 0x80 : 0);
+    c->vic_bank = s_bank;
+    const uint8_t *ram = vic_ram;
+    c->vic_ram_bank = ram && cbm.cfg.ram && ram >= cbm.cfg.ram + 0x10000 ? 1 : 0;
+    c->rom_chars = vic_rom_chars;
+    c->rom_chars_all_banks = vic_chars_all_banks;
+    c->raster = s_line;
+}
+
 /* ---- Registers ---- */
 
 uint8_t vic_read(uint8_t reg)

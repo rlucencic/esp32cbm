@@ -6,6 +6,7 @@
  * Commodore into it: memory, ROMs, settings, keyboard map, joystick,
  * drives 8 and 9, the cartridge and program slots, status.
  */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -493,17 +494,392 @@ static void every_second(void)
     }
 }
 
-/* ---- Status ---- */
+/* ---- Status ----
+ *
+ * The machine card's rows: the chips' registers now (cbm_get_chips()).
+ * The whole reply has esp32emu's 4 KB: the rows stay short.
+ */
+
+/* Pepto's PAL palette (as vic.c draws it) and the VDC's RGBI, for swatches */
+static const uint32_t vic_rgb[16] = {
+    0x000000, 0xFFFFFF, 0x68372B, 0x70A4B2, 0x6F3D86, 0x588D43, 0x352879, 0xB8C76F,
+    0x6F4F25, 0x433900, 0x9A6759, 0x444444, 0x6C6C6C, 0x9AD284, 0x6C5EB5, 0x959595,
+};
+static const uint32_t vdc_rgb[16] = {
+    0x000000, 0x555555, 0x0000AA, 0x5555FF, 0x00AA00, 0x55FF55, 0x00AAAA, 0x55FFFF,
+    0xAA0000, 0xFF5555, 0xAA00AA, 0xFF55FF, 0xAA5500, 0xFFFF55, 0xAAAAAA, 0xFFFFFF,
+};
+
+static void add(char *text, size_t size, size_t *n, const char *fmt, ...)
+{
+    if (*n >= size - 1) {
+        return;
+    }
+    va_list ap;
+    va_start(ap, fmt);
+    int k = vsnprintf(text + *n, size - *n, fmt, ap);
+    va_end(ap);
+    *n = k < 0 ? *n : *n + k >= size ? size - 1 : *n + k;
+}
+
+static void swatch(char *text, size_t size, size_t *n, uint32_t rgb)
+{
+    add(text, size, n, " <b style=\"background:#%06lx\">&nbsp;&nbsp;&nbsp;</b>", (unsigned long)rgb);
+}
+
+/* The ROMs, where each came from, and those the CPU sees now */
+static void rom_row(emu_json_t *j, const cbm_chips_t *c, bool c128)
+{
+    static const struct {
+        rom_id_t id;
+        const char *what;
+    } c64[] = {
+        { ROM_C64_BASIC, "BASIC V2" }, { ROM_C64_KERNAL, "KERNAL" }, { ROM_C64_CHARGEN, "characters" },
+        { ROM_1541, "the 1541-II's DOS" },
+    }, c128_roms[] = {
+        { ROM_C128_BASIC, "BASIC 7.0" }, { ROM_C128_KERNAL, "KERNAL" }, { ROM_C128_CHARGEN, "characters" },
+        { ROM_C128_C64, "the C64 mode's ROM" }, { ROM_1571, "the 1571's DOS" },
+    };
+    char text[256];
+    size_t n = 0;
+    int count = c128 ? 5 : 4;
+    bool drive = s_cfg.drive_rom != NULL;
+    for (int pass = 0; pass < 2; pass++) {      /* those from the SD card, then the flash's */
+        int listed = 0;
+        for (int i = 0; i < count; i++) {
+            rom_id_t id = c128 ? c128_roms[i].id : c64[i].id;
+            if ((i == count - 1 && !drive) || rom_store_from_sd(id) != (pass == 0)) {
+                continue;
+            }
+            add(text, sizeof(text), &n, "%s%s", listed++ ? ", " : n ? "; " : "",
+                c128 ? c128_roms[i].what : c64[i].what);
+        }
+        if (listed) {
+            add(text, sizeof(text), &n, " from the %s", pass == 0 ? "SD card" : "flash");
+        }
+    }
+    if (!drive) {
+        add(text, sizeof(text), &n, "; no drive ROM (no disks)");
+    }
+    /* in the CPU's map now */
+    const char *in[4];
+    int k = 0;
+    if (c->c128_mode) {
+        uint8_t cr = c->mmu[0];
+        if (!(cr & 0x02) || ((cr >> 2) & 3) == 0) {
+            in[k++] = "BASIC";
+        }
+        if (((cr >> 4) & 3) == 0) {
+            in[k++] = "KERNAL";
+            if (cr & 0x01) {
+                in[k++] = "characters";
+            }
+        }
+    } else {
+        static const char *const names[] = {
+            [CBM_MAP_ROML] = "cartridge ROML", [CBM_MAP_ROMH] = "cartridge ROMH", [CBM_MAP_BASIC] = "BASIC",
+            [CBM_MAP_KERNAL] = "KERNAL", [CBM_MAP_CHARS] = "characters",
+        };
+        for (int i = 0; i < 4; i++) {
+            if (c->map[i] < sizeof(names) / sizeof(names[0]) && names[c->map[i]]) {
+                in[k++] = names[c->map[i]];
+            }
+        }
+    }
+    add(text, sizeof(text), &n, "; in now: ");
+    for (int i = 0; i < k; i++) {
+        add(text, sizeof(text), &n, "%s%s", i ? ", " : "", in[i]);
+    }
+    if (k == 0) {
+        add(text, sizeof(text), &n, "none (all RAM)");
+    }
+    emu_json_row(j, "ROM", text);
+}
+
+static void memory_row(emu_json_t *j, const cbm_chips_t *c)
+{
+    char text[256];
+    size_t n = 0;
+    if (c->c128_mode) {
+        /* the MMU: CR's banking, common RAM, the page 0 and 1 pointers */
+        static const char *const mid[4] = { "BASIC", "function ROM (none)", "function ROM (none)", "RAM" };
+        static const char *const top[4] = { "KERNAL", "function ROM (none)", "function ROM (none)", "RAM" };
+        static const char *const common_kb[4] = { "1", "4", "8", "16" };
+        uint8_t cr = c->mmu[0], rcr = c->mmu[6];
+        unsigned hi = (cr >> 4) & 3;
+        add(text, sizeof(text), &n, "MMU CR $%02X: RAM bank %u; $4000 %s, $8000 %s, $C000 %s, $D000 %s", cr,
+            (cr >> 6) & 1, (cr & 0x02) ? "RAM" : "BASIC", mid[(cr >> 2) & 3], top[hi],
+            !(cr & 0x01) ? "I/O" : hi == 0 ? "characters" : top[hi]);
+        if (rcr & 0x0C) {
+            add(text, sizeof(text), &n, "; %s KB common RAM %s", common_kb[rcr & 3],
+                (rcr & 0x0C) == 0x0C ? "at both ends" : (rcr & 0x04) ? "at the bottom" : "at the top");
+        }
+        if (c->mmu[7] != 0 || (c->mmu[8] & 1) || c->mmu[9] != 1 || (c->mmu[10] & 1)) {
+            add(text, sizeof(text), &n, "; pages 0 and 1 at $%02X00, $%02X00 (banks %u, %u)", c->mmu[7],
+                c->mmu[9], c->mmu[8] & 1, c->mmu[10] & 1);
+        }
+    } else {
+        /* the 6510's port and the cartridge's lines into the PLA */
+        static const char *const names[] = {
+            [CBM_MAP_RAM] = "RAM", [CBM_MAP_ROML] = "ROML", [CBM_MAP_ROMH] = "ROMH", [CBM_MAP_BASIC] = "BASIC",
+            [CBM_MAP_KERNAL] = "KERNAL", [CBM_MAP_CHARS] = "characters", [CBM_MAP_IO] = "I/O",
+            [CBM_MAP_OPEN] = "nothing",
+        };
+        bool ultimax = c->exrom && !c->game;
+        add(text, sizeof(text), &n, "$01 = $%02X: $8000 %s, $A000 %s, $D000 %s, $E000 %s, %s", c->port_data,
+            names[c->map[0] & 7], names[c->map[1] & 7], names[c->map[2] & 7], names[c->map[3] & 7],
+            ultimax ? "$0000-$0FFF RAM, nothing elsewhere" : "the rest RAM");
+        add(text, sizeof(text), &n, "; %s", c->exrom && c->game ? "EXROM and GAME high (no cartridge)" :
+            c->game ? "EXROM low (an 8 KB cartridge)" : c->exrom ? "GAME low (Ultimax)" :
+            "EXROM and GAME low (a 16 KB cartridge)");
+    }
+    emu_json_row(j, "Memory", text);
+}
+
+/* The VIC-II's mode, where it reads, its colours, its sprites */
+static void vic_rows(emu_json_t *j, const cbm_chips_t *c)
+{
+    static const char *const modes[8] = {
+        "Text, 40 × 25 characters, a colour each",
+        "Multicolour text, 40 × 25 (4 colours where the colour is 8-15)",
+        "Bitmap, 320 × 200, 2 colours a cell of 8 × 8",
+        "Multicolour bitmap, 160 × 200, 4 colours a cell",
+        "Extended colour text, 40 × 25",
+        "Invalid mode (black)", "Invalid mode (black)", "Invalid mode (black)",
+    };
+    const uint8_t *v = c->vic;
+    unsigned mode = ((v[0x11] >> 4) & 6) | ((v[0x16] >> 4) & 1);
+    unsigned base = c->vic_bank * 0x4000u, screen = base + ((v[0x18] >> 4) & 15) * 0x400u;
+    char text[300];
+    size_t n = 0;
+    add(text, sizeof(text), &n, "%s; ", modes[mode]);
+    if (mode & 2) {
+        add(text, sizeof(text), &n, "bitmap at $%04X, colours at $%04X", base + (v[0x18] & 8) * 0x400u, screen);
+    } else {
+        unsigned chars = base + ((v[0x18] >> 1) & 7) * 0x800u;
+        bool rom = c->rom_chars && (chars & 0x3000) == 0x1000 && (!(c->vic_bank & 1) || c->rom_chars_all_banks);
+        add(text, sizeof(text), &n, "screen at $%04X, characters at $%04X%s", screen, chars, rom ? " (ROM)" : "");
+    }
+    if (c->vic_ram_bank) {
+        add(text, sizeof(text), &n, " of RAM bank 1");
+    }
+    add(text, sizeof(text), &n, "; %sscroll %u, %u%s", (v[0x11] & 8) ? (v[0x16] & 8) ? "" : "38 columns, " :
+        (v[0x16] & 8) ? "24 rows, " : "24 rows of 38 columns, ", v[0x16] & 7, v[0x11] & 7,
+        (v[0x11] & 0x10) ? "" : "; blanked (DEN off)");
+    emu_json_row(j, "Screen", text);
+
+    /* the colour registers the mode uses: border, backgrounds */
+    n = 0;
+    add(text, sizeof(text), &n, "Border");
+    swatch(text, sizeof(text), &n, vic_rgb[v[0x20] & 15]);
+    int backgrounds = mode == 1 ? 3 : mode == 4 ? 4 : 1;
+    add(text, sizeof(text), &n, ", background%s", backgrounds > 1 ? "s" : "");
+    for (int i = 0; i < backgrounds; i++) {
+        swatch(text, sizeof(text), &n, vic_rgb[v[0x21 + i] & 15]);
+    }
+    emu_json_row(j, "Palette", text);
+
+    n = 0;
+    for (int i = 0; i < 8; i++) {
+        if (v[0x15] & (1 << i)) {
+            add(text, sizeof(text), &n, "%s%d at %u,%u", n ? ", " : "", i, v[2 * i] | (((v[0x10] >> i) & 1) << 8),
+                v[2 * i + 1]);
+        }
+    }
+    if (n == 0) {
+        add(text, sizeof(text), &n, "None on");
+    }
+    static const struct {
+        uint8_t reg;
+        const char *what;
+    } flags[] = { { 0x1C, "multicolour" } };
+    for (size_t f = 0; f < sizeof(flags) / sizeof(flags[0]); f++) {
+        uint8_t on = v[flags[f].reg] & v[0x15];
+        if (on) {
+            add(text, sizeof(text), &n, "; %s", flags[f].what);
+            for (int i = 0; i < 8; i++) {
+                if (on & (1 << i)) {
+                    add(text, sizeof(text), &n, " %d", i);
+                }
+            }
+        }
+    }
+    emu_json_row(j, "Sprites", text);
+}
+
+/* The C128's 80 columns (shown instead of the VIC-II's 40 while 40/80 is down) */
+static void vdc_rows(emu_json_t *j, const cbm_chips_t *c)
+{
+    const uint8_t *r = c->vdc;
+    char text[200];
+    size_t n = 0;
+    unsigned start = (r[12] << 8) | r[13];
+    add(text, sizeof(text), &n, "80 columns (the VDC, %u KB): ", (r[28] & 0x10) ? 64 : 16);
+    if (r[25] & 0x80) {
+        add(text, sizeof(text), &n, "bitmap, %u × %u at $%04X", r[1] * 8u, r[6] * ((r[9] & 31) + 1u), start);
+    } else {
+        add(text, sizeof(text), &n, "text, %u × %u at $%04X, characters at $%04X", r[1], r[6], start,
+            (r[28] & 0xE0) << 8);
+    }
+    if (r[25] & 0x40) {
+        add(text, sizeof(text), &n, ", attributes at $%04X", (r[20] << 8) | r[21]);
+    }
+    emu_json_row(j, "Screen", text);
+    n = 0;
+    if (r[25] & 0x40) {
+        add(text, sizeof(text), &n, "Background");       /* the colours: the attributes' */
+    } else {
+        add(text, sizeof(text), &n, "Foreground");
+        swatch(text, sizeof(text), &n, vdc_rgb[r[26] >> 4]);
+        add(text, sizeof(text), &n, ", background");
+    }
+    swatch(text, sizeof(text), &n, vdc_rgb[r[26] & 15]);
+    emu_json_row(j, "Palette", text);
+}
+
+static void sound_row(emu_json_t *j, const cbm_chips_t *c)
+{
+    static const char *const waves[16] = {
+        "", "triangle", "sawtooth", "triangle+sawtooth", "pulse", "pulse+triangle", "pulse+sawtooth",
+        "combined waves", "noise", "noise+triangle", "noise+sawtooth", "combined waves", "noise+pulse",
+        "combined waves", "combined waves", "combined waves",
+    };
+    const uint8_t *s = c->sid;
+    char text[300];
+    size_t n = 0;
+    add(text, sizeof(text), &n, "Volume %u", s[0x18] & 15);
+    if ((s[0x18] & 0x70) && (s[0x17] & 0x0F)) {
+        static const char *const passes[8] = {
+            "", "low-pass", "band-pass", "low+band-pass", "high-pass", "notch", "band+high-pass", "all-pass",
+        };
+        add(text, sizeof(text), &n, "; %s filter at $%03X, resonance %u, on", passes[(s[0x18] >> 4) & 7],
+            (s[0x15] & 7) | (s[0x16] << 3), s[0x17] >> 4);
+        for (int i = 0; i < 4; i++) {
+            if (s[0x17] & (1 << i)) {
+                add(text, sizeof(text), &n, i < 3 ? " %d" : " ext", i + 1);
+            }
+        }
+    }
+    int sounding = 0;
+    for (int i = 0; i < 3; i++) {
+        const uint8_t *v = s + 7 * i;
+        uint8_t ctrl = v[4], wave = ctrl >> 4;
+        bool on = c->sound ? c->sid_level[i] > 0 : (ctrl & 1);
+        if (!wave || !on || (ctrl & 0x08) || (i == 2 && (s[0x18] & 0x80) && !(s[0x17] & 4))) {
+            continue;
+        }
+        unsigned freq = v[0] | (v[1] << 8), pw = v[2] | ((v[3] & 15) << 8);
+        add(text, sizeof(text), &n, "; voice %d: %lu Hz %s", i + 1,
+            (unsigned long)(((uint64_t)freq * CBM_CLOCK_HZ + (1u << 23)) >> 24), waves[wave]);
+        if (wave & 4) {
+            add(text, sizeof(text), &n, " %u%%", pw * 100 / 4096);
+        }
+        add(text, sizeof(text), &n, "%s%s", (ctrl & 4) ? ", ring" : "", (ctrl & 2) ? ", sync" : "");
+        if (c->sound) {
+            add(text, sizeof(text), &n, ", level %u", c->sid_level[i]);
+        }
+        sounding++;
+    }
+    if (!sounding) {
+        add(text, sizeof(text), &n, ", silent");
+    }
+    emu_json_row(j, "Sound", text);
+}
+
+/* The VIC's interrupts and the CIAs' timers (CIA 1 the IRQ, CIA 2 the NMI) */
+static void interrupts_row(emu_json_t *j, const cbm_chips_t *c)
+{
+    char text[300];
+    size_t n = 0;
+    const uint8_t *v = c->vic;
+    add(text, sizeof(text), &n, "VIC:");
+    if (v[0x1A] & 1) {
+        add(text, sizeof(text), &n, " raster line %u", v[0x12] | ((v[0x11] & 0x80) << 1));
+    }
+    if (v[0x1A] & 6) {
+        add(text, sizeof(text), &n, "%s sprite collisions", (v[0x1A] & 1) ? "," : "");
+    }
+    if (!(v[0x1A] & 7)) {
+        add(text, sizeof(text), &n, " none");
+    }
+    for (int i = 0; i < 2; i++) {
+        add(text, sizeof(text), &n, "; CIA %d:", i + 1);
+        int timers = 0;
+        for (int t = 0; t < 2; t++) {
+            uint8_t cr = c->cia[i].cr[t];
+            if (!(cr & 1)) {
+                continue;
+            }
+            unsigned latch = c->cia[i].latch[t];
+            bool phi2 = t == 0 ? !(cr & 0x20) : !(cr & 0x60);
+            add(text, sizeof(text), &n, "%s %c $%04X", timers++ ? "," : " timer", 'A' + t, latch);
+            if (cr & 0x08) {
+                add(text, sizeof(text), &n, " once");
+            } else if (phi2) {
+                unsigned long hz = (CBM_CLOCK_HZ + (latch + 1ul) / 2) / (latch + 1ul);
+                add(text, sizeof(text), &n, hz < 10000 ? " (%lu Hz)" : " (%lu kHz)", hz < 10000 ? hz : hz / 1000);
+            }
+            if (c->cia[i].imr & (1 << t)) {
+                add(text, sizeof(text), &n, i ? " NMI" : " IRQ");
+            }
+        }
+        if (!timers) {
+            add(text, sizeof(text), &n, " stopped");
+        }
+    }
+    emu_json_row(j, "Interrupts", text);
+}
 
 static void status(emu_json_t *j, int section)
 {
-    char text[160];
+    char text[300];
     if (section == EMU_STATUS_ROWS) {
-        emu_json_row(j, "System", model_full[cbm_model()]);
-        emu_json_row(j, "ROMs", s_rom_text);
-        snprintf(text, sizeof(text), "port %d on the numeric keypad%s (F11 switches)", settings.joystick,
-                 s_arrows_joystick ? " and cursor keys" : "");
+        cbm_chips_t c;
+        cbm_get_chips(&c);
+        bool c128 = cbm_model() == CBM_MODEL_C128;
+        if (c128) {
+            snprintf(text, sizeof(text), "Commodore 128 (PAL), %s mode: %s, 128 KB RAM, VIC-II, VDC, SID 6581, "
+                     "two CIAs", c.c128_mode ? "C128" : "C64", c.z80 ? "the Z80 has the bus" :
+                     c.fast ? "an 8502 at 2 MHz (FAST)" : "an 8502 at 1 MHz");
+        } else {
+            snprintf(text, sizeof(text), "Commodore 64 (PAL): a 6510 at 0.985 MHz, 64 KB RAM, VIC-II, SID 6581, "
+                     "two 6526 CIAs");
+        }
+        emu_json_row(j, "System", text);
+        rom_row(j, &c, c128);
+        memory_row(j, &c);
+        if (c.c128_mode && c.key_40_80) {
+            vdc_rows(j, &c);
+        } else {
+            vic_rows(j, &c);
+        }
+        sound_row(j, &c);
+        interrupts_row(j, &c);
+        size_t n = 0;
+        add(text, sizeof(text), &n, "By position (as VICE); Esc RUN/STOP, Tab CTRL, Ctrl and Alt C=, Page Up "
+            "RESTORE, Page Down ↑");
+        if (c128) {
+            add(text, sizeof(text), &n, "; F9 ESC, F10 HELP, AltGr ALT, End LINE FEED, Scroll Lock NO SCROLL, "
+                "Caps Lock (%s), Print Screen 40/80 DISPLAY", c.caps_lock ? "on" : "off");
+        }
+        emu_json_row(j, "Keyboard", text);
+        uint8_t joy = s_joy_pad | s_joy_arrows;
+        n = 0;
+        add(text, sizeof(text), &n, "Port %d: keypad (0, 5 fire)%s; F11 swaps ports, F12 the cursor keys",
+            settings.joystick, s_arrows_joystick ? " and cursor keys (Alt fire)" : "");
+        if (joy) {
+            static const char *const dirs[5] = { "up", "down", "left", "right", "fire" };
+            add(text, sizeof(text), &n, "; now:");
+            for (int i = 0; i < 5; i++) {
+                if (joy & (1 << i)) {
+                    add(text, sizeof(text), &n, " %s", dirs[i]);
+                }
+            }
+        }
         emu_json_row(j, "Joystick", text);
+        emu_json_row(j, "Disks", c128 ? "8: and 9: 1571s, emulated whole: D64, D71, G64; cartridges CRT; "
+                     "programs PRG, T64" : "8: and 9: 1541-IIs, emulated whole: D64, G64; cartridges CRT; "
+                     "programs PRG, T64");
         return;
     }
     cbm_disk_status_t ds;

@@ -377,6 +377,15 @@ void cbm_audio_enable(bool enable)
     sid.enabled = enable;
 }
 
+void sid_get_state(cbm_chips_t *c)
+{
+    memcpy(c->sid, sid.reg, sizeof(c->sid));
+    for (int i = 0; i < 3; i++) {
+        c->sid_level[i] = ren.v[i].env;
+    }
+    c->sound = sid.enabled;
+}
+
 void sid_init(void)
 {
     if (sid.enabled && sid.queue == NULL) {
