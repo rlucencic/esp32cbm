@@ -10,6 +10,10 @@ BUILD     := build
 CFLAGS    := -O2 -g -Wall -Wextra -Wno-unused-parameter -DZ80_HOST_HOOK -DM6502_HOST_HOOK -DCONFIG_Z80_TIMING_TSTATES=1 -DCONFIG_Z80_READ_SPECIAL=1 \
              -I$(CBM)/include -I$(CBM) -I$(Z80)/include -I$(M6502)/include -I$(EMUDBG)/include -I$(DISKSPACE)/include
 
+ifeq ($(CBM_DRIVE_METRICS),1)
+CFLAGS += -DCBM_DRIVE_METRICS
+endif
+
 CBM_SRCS   := $(wildcard $(CBM)/*.c)
 CBM_OBJS   := $(patsubst $(CBM)/%.c,$(BUILD)/cbm/%.o,$(CBM_SRCS)) $(BUILD)/z80.o $(BUILD)/z80_dbg.o $(BUILD)/m6502.o $(BUILD)/m6502_dbg.o \
               $(BUILD)/emudbg.o $(BUILD)/emudbg_posix.o $(BUILD)/diskspace_cbm.o

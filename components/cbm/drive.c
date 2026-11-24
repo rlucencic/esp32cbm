@@ -57,6 +57,11 @@ typedef struct {
     bool atn, clk, data;            /* from the computer, at this drive's time */
     uint8_t pb1;                    /* VIA 1 port B as it drives the bus */
     uint32_t reads, writes;
+#ifdef CBM_DRIVE_METRICS
+    struct {
+        uint32_t gcr_bytes, ready, so, so_2mhz, burst_tx;
+    } metrics;
+#endif
     /* the clock: drive cycles = base_d + speed * (computer cycles - base_c) * 1 MHz / 985248 Hz */
     uint64_t base_c, base_d;
     int speed;                      /* 1 or 2 (a 1571 at 2 MHz) */
@@ -469,6 +474,9 @@ static void cia_sdr(cia_t *c, uint8_t byte)
     CBM_LOG("drive %d: shifted out $%02X (%s)", d->unit, byte, d->fast_out ? "sends" : "not sending");
 #endif
     if (d->fast_out) {
+#ifdef CBM_DRIVE_METRICS
+        d->metrics.burst_tx++;
+#endif
         c128_fast_in(byte);
     }
 }
@@ -483,6 +491,9 @@ static void disk_bytes(drive_t *d)
     uint16_t len = d->inserted ? d->disk->len[ht] : 0;
     bool writing = !via_cb2(&d->via2);
     while (d->next_byte <= d->cpu.cycles) {
+#ifdef CBM_DRIVE_METRICS
+        d->metrics.gcr_bytes++;
+#endif
         uint8_t b = 0;
         if (t && len) {
             if (d->pos >= len) {
@@ -504,8 +515,15 @@ static void disk_bytes(drive_t *d)
         d->sync = sync;
         d->prev = b;
         if (!sync) {
+#ifdef CBM_DRIVE_METRICS
+            d->metrics.ready++;
+#endif
             via_latch_a(&d->via2, b);
             if (via_ca2(&d->via2)) {
+#ifdef CBM_DRIVE_METRICS
+                d->metrics.so++;
+                d->metrics.so_2mhz += d->speed == 2;
+#endif
                 m6502_set_overflow(&d->cpu);    /* byte ready on SO */
                 d->byte_ready = true;
             }
@@ -673,6 +691,9 @@ void drives_reset(void)
         clock_start(d);
         d->side = 0;
         d->fast_out = false;
+#ifdef CBM_DRIVE_METRICS
+        memset(&d->metrics, 0, sizeof(d->metrics));
+#endif
         via_reset(&d->via1);
         via_reset(&d->via2);
         cia_reset(&d->cia);
@@ -804,6 +825,23 @@ void CBM_HOT drives_run(void)
 
 void drives_frame_end(void)
 {
+#ifdef CBM_DRIVE_METRICS
+    uint32_t frame = cbm.frames + 1;
+    if (!s_1571 || frame % 50) {
+        return;
+    }
+    for (int i = 0; i < CBM_DRIVES; i++) {
+        drive_t *d = &s_drive[i];
+        if (!d->present) {
+            continue;
+        }
+        CBM_LOG("drive metrics frame %lu unit %d gcr %lu ready %lu so %lu so_2mhz %lu burst_tx %lu",
+                (unsigned long)frame, d->unit, (unsigned long)d->metrics.gcr_bytes,
+                (unsigned long)d->metrics.ready, (unsigned long)d->metrics.so,
+                (unsigned long)d->metrics.so_2mhz, (unsigned long)d->metrics.burst_tx);
+        memset(&d->metrics, 0, sizeof(d->metrics));
+    }
+#endif
 }
 
 /* ---- Disks ---- */

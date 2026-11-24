@@ -329,6 +329,11 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   from the Program slot, the long KERNAL load, C128 DIRECTORY of a D71 in
   40 and 80 columns, a BASIC program in 80 columns, CP/M boot and DIR, the
   Disks page, uploads and inserts through the web API.
+- **CP/M and 1571 profiling (2026-11-24).** The host and MaTouch match
+  all 27 drive-counter windows through frame 1350, including 399,358
+  SO assertions at 2 MHz and 35,770 burst bytes. The MaTouch reaches
+  the prompt in about 35 seconds with or without the opt-in counters.
+  [Build and measurement notes](docs/c128-cpm-1571-profile-2026-11-24.md)
 - **Media validation (2026-11-24).** The host replay matched ARE-TYPE
   from T64 against the PRG and verified EasyFlash gameplay and G64
   writeback. Hessian 1.2's default load stalled on the host and MaTouch.

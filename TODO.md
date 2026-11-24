@@ -2,11 +2,6 @@
 
 Proposed work in priority order. See [Development](README.md#development) for the current project.
 
-2. **Profile the C128 while CP/M boots.** Measure the 1571 at 2 MHz with
-   `components/cbm/drive.c` counters for byte-ready and SO events. Compare boot
-   time and real-time pace on the host and boards. Require matching sector
-   reads and C128 burst-load behavior before retaining a scheduling change.
-
 3. **Check 40- and 80-column use on the Tab5.** Use a physical keyboard in C128
    BASIC and CP/M, switch the displayed output, and check a 40-column SID tone
    on the speaker. Record which keyboard paths were exercised and verify that
