@@ -283,9 +283,11 @@ options and the lessons learned along the way.
   it by hand yet.
 - PAL only; the SID is a 6581 with a simple filter model.
 - Coverage includes the Lorenz suite, BASIC, KERNAL disk commands, C128
-  burst loading and CP/M. [ARE-TYPE](docs/aretype-validation-2026-11-08.md)
-  was replayed on the host and checked on the Tab5. Fast loaders, additional
-  games and demos, cartridges, `.G64` and `.T64` still need broader coverage.
+  burst loading and CP/M. On the host, ARE-TYPE runs from T64, the
+  C64 Game Framework EasyFlash example boots and plays, and G64 changes
+  persist across eject and remount. Hessian 1.2's default disk loader
+  stalls. Holding Space during the load selects a fallback that reaches
+  the title and opening scene on the host and MaTouch. [Media validation](docs/media-validation-2026-11-24.md)
 - A busy drive costs time: a 1541 loading runs the C64 at 96–100% speed, a
   1571 at 2 MHz (CP/M starting) the C128 at 70–90%.
 - The 1571's WD1770 isn't emulated (MFM disks for CP/M from other machines

@@ -2,12 +2,6 @@
 
 Proposed work in priority order. See [Development](README.md#development) for the current project.
 
-1. **Broaden the C64 media and loader sample.** Use the [ARE-TYPE
-   replay](docs/aretype-validation-2026-11-08.md) as a control. Add one IEC
-   fast loader on a `.G64`, one `.T64` program and one banked cartridge. Record
-   title and gameplay checkpoints, load time and any disk writeback, then
-   repeat the heaviest case on the MaTouch.
-
 2. **Profile the C128 while CP/M boots.** Measure the 1571 at 2 MHz with
    `components/cbm/drive.c` counters for byte-ready and SO events. Compare boot
    time and real-time pace on the host and boards. Require matching sector
@@ -17,3 +11,8 @@ Proposed work in priority order. See [Development](README.md#development) for th
    BASIC and CP/M, switch the displayed output, and check a 40-column SID tone
    on the speaker. Record which keyboard paths were exercised and verify that
    changing output leaves the mounted disk and guest session intact.
+
+4. **Trace the Hessian IEC fast-loader stall.** Reproduce the default load
+   with the D64 and G64 fixtures in the [media validation report](docs/media-validation-2026-11-24.md).
+   Compare the first diverging CIA/VIA serial transitions with a reference
+   1541 trace. Check the fallback and a normal KERNAL load after any fix.

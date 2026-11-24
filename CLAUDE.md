@@ -329,9 +329,14 @@ bash -c '. $IDF_PATH/export.sh >/dev/null 2>&1; \
   from the Program slot, the long KERNAL load, C128 DIRECTORY of a D71 in
   40 and 80 columns, a BASIC program in 80 columns, CP/M boot and DIR, the
   Disks page, uploads and inserts through the web API.
+- **Media validation (2026-11-24).** The host replay matched ARE-TYPE
+  from T64 against the PRG and verified EasyFlash gameplay and G64
+  writeback. Hessian 1.2's default load stalled on the host and MaTouch.
+  Its fallback title matched the host in RGB565 on the MaTouch.
+  [Fixtures and results](docs/media-validation-2026-11-24.md)
 - Not verified yet: sound on the speaker, a BLE keyboard on the Commodore,
-  joysticks, cartridges, G64 and T64 images, fast loaders, games, demos,
-  the web page's drop area.
+  a physical joystick, the web page's drop area and broader game and demo
+  compatibility.
 - **Free disk space** (web page, `space.c`): the BAM's blocks free read
   from the live GCR (`gcr_read_sector()`: D64, D71, G64), counted at
   insert, eject and after a flush. Host: 662, 1327 and 584 blocks as the
