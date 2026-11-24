@@ -282,15 +282,20 @@ options and the lessons learned along the way.
   but sound, touch, Bluetooth and the Tab5 Keyboard have not been tried on
   it by hand yet.
 - PAL only; the SID is a 6581 with a simple filter model.
-- Tested so far with the Lorenz suite, BASIC, the KERNAL's disk commands,
-  the C128's burst loading and CP/M; **fast loaders, games and demos,
-  cartridges, `.G64` and `.T64` haven't been tried yet**.
+- Coverage includes the Lorenz suite, BASIC, KERNAL disk commands, C128
+  burst loading and CP/M. [ARE-TYPE](docs/aretype-validation-2026-11-08.md)
+  was replayed on the host and checked on the Tab5. Fast loaders, additional
+  games and demos, cartridges, `.G64` and `.T64` still need broader coverage.
 - A busy drive costs time: a 1541 loading runs the C64 at 96–100% speed, a
   1571 at 2 MHz (CP/M starting) the C128 at 70–90%.
 - The 1571's WD1770 isn't emulated (MFM disks for CP/M from other machines
   don't read); the VDC has no interlace or light pen, and FAST doesn't slow
   I/O accesses or disturb the 40-column picture as on a real C128.
 - No datasette, REU, printer or 1351 mouse; no C128 function ROMs.
+
+## Roadmap
+
+See [TODO.md](TODO.md) for proposed work and how to verify it.
 
 ## Credits
 
